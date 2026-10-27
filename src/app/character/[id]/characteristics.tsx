@@ -3,9 +3,10 @@ import { useLocalSearchParams } from "expo-router";
 import { useState } from "react";
 import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 import { Page } from "@/components/Page";
-import { getCharacter, setDetails } from "@/lib/api/characters";
-import type { Character } from "@/lib/api/client";
+import { getCharacter, getSheet, setDetails } from "@/lib/api/characters";
+import type { Character, Sheet } from "@/lib/api/client";
 import { useCharacterPatch } from "@/lib/api/useCharacterPatch";
+import { pretty } from "@/lib/format";
 
 type Details = NonNullable<Character["details"]>;
 type Key = keyof Details;
@@ -62,11 +63,14 @@ const SECTIONS: { title: string; note?: string; fields: Field[] }[] = [
 export default function CharacteristicsPage() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const charQ = useQuery({ queryKey: ["character", id], queryFn: () => getCharacter(id) });
+  const sheetQ = useQuery({ queryKey: ["sheet", id], queryFn: () => getSheet(id) });
   const character = charQ.data;
+  const sheet = sheetQ.data;
 
-  if (!character) {
-    return charQ.error ? (
-      <Text style={{ padding: 16, color: "#b71c1c" }}>{charQ.error.message}</Text>
+  if (!character || !sheet) {
+    const err = charQ.error ?? sheetQ.error;
+    return err ? (
+      <Text style={{ padding: 16, color: "#b71c1c" }}>{err.message}</Text>
     ) : (
       <ActivityIndicator style={{ flex: 1 }} />
     );
@@ -75,14 +79,17 @@ export default function CharacteristicsPage() {
   const details = character.details ?? {};
   return (
     <Page>
-      {SECTIONS.map((sec) => (
-        <DetailsSection
-          // Reset the draft whenever the saved values change.
-          key={sec.title + JSON.stringify(sec.fields.map((f) => details[f.key] ?? ""))}
-          id={id}
-          details={details}
-          {...sec}
-        />
+      {SECTIONS.map((sec, i) => (
+        <View key={sec.title} style={{ gap: 20 }}>
+          <DetailsSection
+            // Reset the draft whenever the saved values change.
+            key={JSON.stringify(sec.fields.map((f) => details[f.key] ?? ""))}
+            id={id}
+            details={details}
+            {...sec}
+          />
+          {i === 0 && <LanguagesSection id={id} character={character} sheet={sheet} />}
+        </View>
       ))}
     </Page>
   );
@@ -153,6 +160,70 @@ function DetailsSection({
   );
 }
 
+// The sheet lists every language known: those granted by race, background and
+// choices, plus the extras stored on the character. Only the extras can be removed here.
+function LanguagesSection({ id, character, sheet }: { id: string; character: Character; sheet: Sheet }) {
+  const patch = useCharacterPatch(id);
+  const [draft, setDraft] = useState("");
+  const extras = character.languages ?? [];
+  const known = sheet.languages ?? [];
+  const granted = known.filter((l) => !extras.includes(l));
+
+  // Stored like the content ids ("deep_speech"), so they match granted languages.
+  const newId = draft.trim().toLowerCase().replace(/\s+/g, "_");
+  const duplicate = known.includes(newId) || extras.includes(newId);
+
+  // `languages` is replaced whole, so send the full list.
+  const add = () =>
+    patch.mutate({ languages: [...extras, newId] }, { onSuccess: () => setDraft("") });
+  const remove = (l: string) => patch.mutate({ languages: extras.filter((x) => x !== l) });
+
+  return (
+    <View style={{ gap: 8 }}>
+      <Text style={s.section}>Languages</Text>
+      <View style={s.box}>
+        <View style={[s.langs, { marginTop: 4 }]}>
+          {known.length === 0 && extras.length === 0 && <Text style={s.muted}>None</Text>}
+          {granted.map((l) => (
+            <View key={l} style={s.lang}>
+              <Text style={s.langText}>{pretty(l)}</Text>
+            </View>
+          ))}
+          {extras.map((l) => (
+            <Pressable
+              key={l}
+              onPress={() => remove(l)}
+              disabled={patch.isPending}
+              style={[s.lang, s.langExtra]}
+              hitSlop={4}
+            >
+              <Text style={s.langText}>{pretty(l)}</Text>
+              <Text style={{ color: "#b71c1c", fontWeight: "700" }}>×</Text>
+            </Pressable>
+          ))}
+        </View>
+        <Text style={[s.muted, { marginTop: 4 }]}>
+          Languages from your race, background and choices are listed automatically. Tap × to remove
+          one you added.
+        </Text>
+        <View style={[s.inline, { marginTop: 8 }]}>
+          <TextInput
+            value={draft}
+            onChangeText={setDraft}
+            placeholder="Add a language"
+            autoCapitalize="words"
+            onSubmitEditing={() => newId && !duplicate && add()}
+            style={[s.input, { flex: 1 }]}
+          />
+          <Btn label="Add" disabled={!newId || duplicate || patch.isPending} onPress={add} />
+        </View>
+        {duplicate && <Text style={s.muted}>Already known.</Text>}
+        {patch.error && <Text style={s.err}>{patch.error.message}</Text>}
+      </View>
+    </View>
+  );
+}
+
 // Same look as the page picker: opens a list in place. "" means none.
 function Dropdown({
   value,
@@ -216,5 +287,10 @@ const s = StyleSheet.create({
   err: { color: "#b71c1c" },
   input: { borderWidth: 1, borderColor: "#ccc", borderRadius: 8, paddingHorizontal: 10, paddingVertical: 8, fontSize: 16, backgroundColor: "white" },
   dropdown: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", borderWidth: 1, borderColor: "#ccc", borderRadius: 8, paddingHorizontal: 10, paddingVertical: 10, backgroundColor: "white" },
+  inline: { flexDirection: "row", alignItems: "center", gap: 8 },
+  langs: { flexDirection: "row", flexWrap: "wrap", gap: 6 },
+  lang: { flexDirection: "row", alignItems: "center", gap: 6, borderWidth: 1, borderColor: "#999", borderRadius: 16, paddingHorizontal: 12, paddingVertical: 4, backgroundColor: "white" },
+  langExtra: { borderColor: "#1565c0", backgroundColor: "#e8f0fe" },
+  langText: { fontSize: 15, fontWeight: "600" },
   menu: { borderWidth: 1, borderColor: "#ccc", borderRadius: 8, marginTop: 4, backgroundColor: "white" },
 });

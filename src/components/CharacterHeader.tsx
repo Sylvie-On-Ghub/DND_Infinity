@@ -7,6 +7,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { getCharacter, getSheet, listContent } from "@/lib/api/characters";
 import { AcModal } from "./AcModal";
 import { HpModal } from "./HpModal";
+import { InspirationModal } from "./InspirationModal";
 import { PortraitModal } from "./PortraitModal";
 import { RestModal } from "./RestModal";
 
@@ -21,6 +22,7 @@ export function CharacterHeader({ id }: { id: string }) {
   const [restOpen, setRestOpen] = useState(false);
   const [acOpen, setAcOpen] = useState(false);
   const [portraitOpen, setPortraitOpen] = useState(false);
+  const [inspirationOpen, setInspirationOpen] = useState(false);
   const [brokenPortrait, setBrokenPortrait] = useState<string>();
 
   // Same query keys as the screens below, so the cache is shared.
@@ -104,6 +106,7 @@ export function CharacterHeader({ id }: { id: string }) {
               label="Inspiration"
               value={inspiration > 0 ? "●".repeat(inspiration) : "–"}
               grow
+              onPress={() => setInspirationOpen(true)}
             />
             <Pressable style={[styles.box, styles.rest]} onPress={() => setRestOpen(true)}>
               <Text style={styles.value}>Rest</Text>
@@ -122,6 +125,12 @@ export function CharacterHeader({ id }: { id: string }) {
       />
       <RestModal id={id} visible={restOpen} onClose={() => setRestOpen(false)} />
       <AcModal id={id} visible={acOpen} onClose={() => setAcOpen(false)} />
+      <InspirationModal
+        id={id}
+        visible={inspirationOpen}
+        onClose={() => setInspirationOpen(false)}
+        current={inspiration}
+      />
       {/* Mounted only while open, so the input starts from the saved link each time. */}
       {portraitOpen && (
         <PortraitModal
