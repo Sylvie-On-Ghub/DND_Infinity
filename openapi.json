@@ -402,6 +402,14 @@
             },
             "type": "array"
           },
+          "details": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Details"
+              }
+            ],
+            "description": "Descriptive free text: alignment, appearance, personality and so on. The rules engine never reads it. A PATCH can change one field, e.g. {\"details\":{\"faith\":\"Mielikki\"}}."
+          },
           "exhaustion": {
             "type": "integer"
           },
@@ -852,6 +860,56 @@
           },
           "value": {
             "type": "integer"
+          }
+        },
+        "type": "object"
+      },
+      "Details": {
+        "properties": {
+          "age": {
+            "type": "string"
+          },
+          "alignment": {
+            "type": "string"
+          },
+          "appearance": {
+            "type": "string"
+          },
+          "bonds": {
+            "type": "string"
+          },
+          "eyes": {
+            "type": "string"
+          },
+          "faith": {
+            "type": "string"
+          },
+          "flaws": {
+            "type": "string"
+          },
+          "gender": {
+            "type": "string"
+          },
+          "hair": {
+            "type": "string"
+          },
+          "height": {
+            "type": "string"
+          },
+          "ideals": {
+            "type": "string"
+          },
+          "personality_traits": {
+            "type": "string"
+          },
+          "size": {
+            "type": "string"
+          },
+          "skin": {
+            "type": "string"
+          },
+          "weight": {
+            "type": "string"
           }
         },
         "type": "object"

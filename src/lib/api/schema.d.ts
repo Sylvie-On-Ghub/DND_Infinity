@@ -634,6 +634,8 @@ export interface components {
             conditions?: string[];
             current_hp?: number;
             death_saves?: number[];
+            /** @description Descriptive free text: alignment, appearance, personality and so on. The rules engine never reads it. A PATCH can change one field, e.g. {"details":{"faith":"Mielikki"}}. */
+            details?: components["schemas"]["Details"];
             exhaustion?: number;
             feature_ids?: string[];
             hit_dice_used?: number;
@@ -777,6 +779,23 @@ export interface components {
             id?: string;
             name?: string;
             value?: number;
+        };
+        Details: {
+            age?: string;
+            alignment?: string;
+            appearance?: string;
+            bonds?: string;
+            eyes?: string;
+            faith?: string;
+            flaws?: string;
+            gender?: string;
+            hair?: string;
+            height?: string;
+            ideals?: string;
+            personality_traits?: string;
+            size?: string;
+            skin?: string;
+            weight?: string;
         };
         DiceTier: {
             dice?: string;

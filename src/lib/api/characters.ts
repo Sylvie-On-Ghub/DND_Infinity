@@ -124,6 +124,11 @@ export const patchCharacter = async (id: string, body: Character) =>
 export const setPortrait = (url: string | null) =>
   ({ portrait_url: url }) as unknown as Character;
 
+// A merge-patch body for character details. null clears a field, which the
+// generated types can't express, hence the cast.
+export const setDetails = (changes: Record<string, string | null>) =>
+  ({ details: changes }) as unknown as Character;
+
 export const setHp = async (id: string, value: number) =>
   unwrap(
     await api.POST("/api/characters/{id}/hp", {
