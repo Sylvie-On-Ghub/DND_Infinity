@@ -1,24 +1,21 @@
-import { router, usePathname, type Href } from "expo-router";
 import { useState } from "react";
-import { Pressable, Text, View } from "react-native";
+import { Pressable, View } from "react-native";
+import { Text } from "@/components/Text";
 import { PAGES } from "@/lib/pages";
+import { C } from "@/lib/colors";
+import { usePageNav } from "@/lib/usePageNav";
 
 export function PageDropdown({ id }: { id: string }) {
-  const pathname = usePathname();
   const [open, setOpen] = useState(false);
+  const { current, goTo } = usePageNav(id);
 
-  const current =
-    PAGES.find((p) => p.slug && pathname.endsWith(`/${p.slug}`)) ?? PAGES[0];
-
-  const go = (slug: string) => {
+  const go = (i: number) => {
     setOpen(false);
-    if (slug === current.slug) return;
-    // replace, not push, so switching pages doesn't build a back stack
-    router.replace(`/character/${id}${slug ? `/${slug}` : ""}` as Href);
+    goTo(i);
   };
 
   return (
-    <View style={{ paddingHorizontal: 12, paddingVertical: 8, backgroundColor: "#fafafa" }}>
+    <View style={{ paddingHorizontal: 12, paddingVertical: 8, backgroundColor: C.surface }}>
       <Pressable
         onPress={() => setOpen((o) => !o)}
         style={{
@@ -26,11 +23,11 @@ export function PageDropdown({ id }: { id: string }) {
           alignItems: "center",
           justifyContent: "space-between",
           borderWidth: 1,
-          borderColor: "#999",
+          borderColor: C.border,
           borderRadius: 8,
           paddingHorizontal: 12,
           paddingVertical: 10,
-          backgroundColor: "white",
+          backgroundColor: C.surface,
         }}
       >
         <Text style={{ fontSize: 16, fontWeight: "600" }}>{current.label}</Text>
@@ -38,14 +35,14 @@ export function PageDropdown({ id }: { id: string }) {
       </Pressable>
 
       {open && (
-        <View style={{ borderWidth: 1, borderColor: "#ccc", borderRadius: 8, marginTop: 4, backgroundColor: "white" }}>
-          {PAGES.map((p) => (
+        <View style={{ borderWidth: 1, borderColor: C.border, borderRadius: 8, marginTop: 4, backgroundColor: C.surface }}>
+          {PAGES.map((p, i) => (
             <Pressable
               key={p.slug || "index"}
-              onPress={() => go(p.slug)}
+              onPress={() => go(i)}
               style={{
                 padding: 12,
-                backgroundColor: p.slug === current.slug ? "#e8f0fe" : "transparent",
+                backgroundColor: p.slug === current.slug ? C.accentSoft : "transparent",
               }}
             >
               <Text style={{ fontSize: 16, fontWeight: p.slug === current.slug ? "700" : "400" }}>

@@ -2,7 +2,8 @@ import { useQuery } from "@tanstack/react-query";
 import { Image } from "expo-image";
 import { router } from "expo-router";
 import { useState } from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Pressable, StyleSheet, View } from "react-native";
+import { Text } from "@/components/Text";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { getCharacter, getSheet, listContent } from "@/lib/api/characters";
 import { AcModal } from "./AcModal";
@@ -10,6 +11,7 @@ import { HpModal } from "./HpModal";
 import { InspirationModal } from "./InspirationModal";
 import { PortraitModal } from "./PortraitModal";
 import { RestModal } from "./RestModal";
+import { C } from "@/lib/colors";
 
 const pretty = (s?: string) =>
   s ? s.replace(/[-_]/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()) : "";
@@ -166,22 +168,22 @@ function Box({
 }
 
 const styles = StyleSheet.create({
-  wrap: { backgroundColor: "#fafafa", paddingHorizontal: 12, paddingBottom: 10, borderBottomWidth: 1, borderColor: "#ddd" },
+  wrap: { backgroundColor: C.surface, paddingHorizontal: 12, paddingBottom: 10, borderBottomWidth: 1, borderColor: C.divider },
   titleRow: { flexDirection: "row", alignItems: "baseline", flexWrap: "wrap", gap: 8, marginBottom: 8 },
-  back: { fontSize: 28, lineHeight: 28, color: "#1565c0", paddingRight: 4 },
+  back: { fontSize: 28, lineHeight: 28, color: C.accent, paddingRight: 4 },
   name: { fontSize: 20, fontWeight: "700" },
-  sub: { fontSize: 14, color: "#555", flexShrink: 1 },
+  sub: { fontSize: 14, color: C.textSecondary, flexShrink: 1 },
   body: { flexDirection: "row", gap: 8 },
-  icon: { width: 72, height: 72, borderRadius: 16, backgroundColor: "#cfd8dc", alignItems: "center", justifyContent: "center", overflow: "hidden" },
-  iconText: { fontSize: 32, fontWeight: "700", color: "#37474f" },
+  icon: { width: 72, height: 72, borderRadius: 16, backgroundColor: C.fillStrong, alignItems: "center", justifyContent: "center", overflow: "hidden" },
+  iconText: { fontSize: 32, fontWeight: "700", color: C.textSecondary },
   col: { flex: 1, gap: 6 },
   row: { flexDirection: "row", gap: 6 },
-  box: { borderWidth: 1, borderColor: "#999", borderRadius: 8, paddingHorizontal: 8, paddingVertical: 4, justifyContent: "center", backgroundColor: "white", minHeight: 33 },
-  label: { fontSize: 10, color: "#777" },
+  box: { borderWidth: 1, borderColor: C.border, borderRadius: 8, paddingHorizontal: 8, paddingVertical: 4, justifyContent: "center", backgroundColor: C.surface, minHeight: 33 },
+  label: { fontSize: 10, color: C.muted },
   value: { fontSize: 14, fontWeight: "600" },
   hp: { flex: 2, gap: 3 },
-  track: { height: 8, backgroundColor: "#eee", borderRadius: 4, overflow: "hidden" },
-  fill: { height: 8, backgroundColor: "#c62828" },
+  track: { height: 8, backgroundColor: C.divider, borderRadius: 4, overflow: "hidden" },
+  fill: { height: 8, backgroundColor: C.danger },
   hpText: { fontSize: 13, fontWeight: "700" },
-  rest: { backgroundColor: "#e8f0fe", alignItems: "center" },
+  rest: { backgroundColor: C.accentSoft, alignItems: "center" },
 });

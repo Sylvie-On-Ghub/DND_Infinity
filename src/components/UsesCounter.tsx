@@ -1,5 +1,7 @@
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Pressable, StyleSheet, View } from "react-native";
+import { Text } from "@/components/Text";
 import type { ResourceView } from "@/lib/api/client";
+import { C } from "@/lib/colors";
 
 const RECHARGE: Record<string, string> = {
   short_rest: "Short rest",
@@ -67,26 +69,26 @@ const s = StyleSheet.create({
     alignItems: "center",
     gap: 10,
     borderTopWidth: StyleSheet.hairlineWidth,
-    borderColor: "#ccc",
+    borderColor: C.border,
     paddingTop: 8,
   },
   count: { fontSize: 22, fontWeight: "700" },
-  meta: { fontSize: 12, color: "#777" },
+  meta: { fontSize: 12, color: C.muted },
   pips: { flexDirection: "row", gap: 6, flexWrap: "wrap", justifyContent: "center" },
   pip: {
     width: 14,
     height: 14,
     borderRadius: 7,
     borderWidth: 2,
-    borderColor: "#1565c0",
-    backgroundColor: "white",
+    borderColor: C.accent,
+    backgroundColor: C.surface,
   },
-  pipFull: { backgroundColor: "#1565c0" },
+  pipFull: { backgroundColor: C.accent },
   stepBtn: {
     width: 48,
     height: 48,
     borderRadius: 10,
-    backgroundColor: "#e0e0e0",
+    backgroundColor: C.fill,
     alignItems: "center",
     justifyContent: "center",
   },

@@ -1,13 +1,15 @@
 import { useQuery } from "@tanstack/react-query";
 import { useLocalSearchParams } from "expo-router";
 import { useState, type ReactNode } from "react";
-import { ActivityIndicator, Pressable, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, Pressable, StyleSheet, View } from "react-native";
+import { Text } from "@/components/Text";
 import { Page } from "@/components/Page";
 import { UsesCounter } from "@/components/UsesCounter";
 import { getCharacter, getSheet, restoreResource, spendResource } from "@/lib/api/characters";
 import type { FeatureView, ResourceView, Selection } from "@/lib/api/client";
 import { useSheetAction } from "@/lib/api/useSheetAction";
 import { pretty, signed } from "@/lib/format";
+import { C } from "@/lib/colors";
 
 type Group = "class" | "race" | "background" | "feat" | "other";
 
@@ -37,7 +39,7 @@ export default function FeaturesPage() {
   const character = charQ.data;
 
   const err = sheetQ.error ?? charQ.error;
-  if (err) return <Text style={{ padding: 16, color: "#b71c1c" }}>{err.message}</Text>;
+  if (err) return <Text style={{ padding: 16, color: C.danger }}>{err.message}</Text>;
   if (!sheet) return <ActivityIndicator style={{ flex: 1 }} />;
 
   const features = sheet.features ?? [];
@@ -232,21 +234,21 @@ function FeatureCard({
 
 const s = StyleSheet.create({
   section: { fontSize: 24, fontWeight: "600" },
-  muted: { color: "#777", fontSize: 13 },
-  err: { color: "#b71c1c" },
+  muted: { color: C.muted, fontSize: 13 },
+  err: { color: C.danger },
   card: {
     borderWidth: 1,
-    borderColor: "#999",
+    borderColor: C.border,
     borderRadius: 12,
     padding: 10,
     gap: 8,
-    backgroundColor: "white",
+    backgroundColor: C.surface,
   },
   cardHead: { flexDirection: "row", alignItems: "baseline", gap: 8, flexWrap: "wrap" },
   name: { fontSize: 17, fontWeight: "700" },
-  meta: { fontSize: 12, color: "#777" },
-  desc: { fontSize: 14, color: "#333", marginTop: 2 },
-  option: { fontSize: 14, color: "#1565c0" },
-  nested: { borderLeftWidth: 3, borderColor: "#1565c0", paddingLeft: 10, gap: 6 },
+  meta: { fontSize: 12, color: C.muted },
+  desc: { fontSize: 14, color: C.text, marginTop: 2 },
+  option: { fontSize: 14, color: C.accent },
+  nested: { borderLeftWidth: 3, borderColor: C.accent, paddingLeft: 10, gap: 6 },
   nestedName: { fontSize: 15, fontWeight: "700" },
 });

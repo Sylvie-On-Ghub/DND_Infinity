@@ -1,15 +1,10 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { router } from "expo-router";
 import { useState } from "react";
-import {
-  ActivityIndicator,
-  FlatList,
-  Pressable,
-  Text,
-  TextInput,
-  View,
-} from "react-native";
+import { ActivityIndicator, FlatList, Pressable, View } from "react-native";
+import { Text, TextInput } from "@/components/Text";
 import { createCharacter, listCharacters } from "@/lib/api/characters";
+import { C } from "@/lib/colors";
 
 export default function Index() {
   const queryClient = useQueryClient();
@@ -42,7 +37,7 @@ export default function Index() {
           style={{
             flex: 1,
             borderWidth: 1,
-            borderColor: "#ccc",
+            borderColor: C.border,
             borderRadius: 8,
             paddingHorizontal: 12,
           }}
@@ -51,24 +46,24 @@ export default function Index() {
           disabled={!name.trim() || create.isPending}
           onPress={() => create.mutate(name.trim())}
           style={{
-            backgroundColor: !name.trim() || create.isPending ? "#9db4d6" : "#1565c0",
+            backgroundColor: !name.trim() || create.isPending ? C.accentMuted : C.accent,
             paddingHorizontal: 16,
             justifyContent: "center",
             borderRadius: 8,
           }}
         >
-          <Text style={{ color: "white", fontWeight: "600" }}>
+          <Text style={{ color: C.onAccent, fontWeight: "600" }}>
             {create.isPending ? "…" : "Create"}
           </Text>
         </Pressable>
       </View>
 
       {create.error && (
-        <Text style={{ color: "#b71c1c" }}>{create.error.message}</Text>
+        <Text style={{ color: C.danger }}>{create.error.message}</Text>
       )}
       {error && (
         <Pressable onPress={() => refetch()}>
-          <Text style={{ color: "#b71c1c", marginVertical: 8 }}>
+          <Text style={{ color: C.danger, marginVertical: 8 }}>
             {error.message} (tap to retry)
           </Text>
         </Pressable>
@@ -88,7 +83,7 @@ export default function Index() {
             style={{ paddingVertical: 12 }}
           >
             <Text style={{ fontSize: 18, fontWeight: "600" }}>{item.name}</Text>
-            <Text style={{ color: "#777" }}>
+            <Text style={{ color: C.muted }}>
               Level {item.level ?? 0}
               {item.class_ids?.length ? ` · ${item.class_ids.join(", ")}` : ""}
             </Text>

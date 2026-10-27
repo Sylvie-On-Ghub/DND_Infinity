@@ -1,13 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
-import {
-  ActivityIndicator,
-  FlatList,
-  Modal,
-  Pressable,
-  Text,
-  View,
-} from "react-native";
+import { ActivityIndicator, FlatList, Modal, Pressable, View } from "react-native";
+import { Text } from "@/components/Text";
 import {
   getChoiceOptions,
   makeAllocation,
@@ -16,6 +10,7 @@ import {
 } from "@/lib/api/characters";
 import { useSheetAction } from "@/lib/api/useSheetAction";
 import { pretty } from "@/lib/format";
+import { C } from "@/lib/colors";
 
 const ABILITY_IDS = ["str", "dex", "con", "int", "wis", "cha"];
 const ALLOW_INELIGIBLE = false; // flip to let homebrew/DM rulings through
@@ -99,7 +94,7 @@ export function ChoiceEditor({
 
   return (
     <Modal visible animationType="slide" onRequestClose={onClose}>
-      <View style={{ flex: 1, padding: 16, paddingTop: 60 }}>
+      <View style={{ flex: 1, padding: 16, paddingTop: 60, backgroundColor: C.bg }}>
         <Text style={{ fontSize: 22, fontWeight: "700" }}>{title}</Text>
 
         <View style={{ flexDirection: "row", gap: 8, marginVertical: 8 }}>
@@ -111,25 +106,25 @@ export function ChoiceEditor({
                 paddingHorizontal: 12,
                 paddingVertical: 6,
                 borderRadius: 16,
-                backgroundColor: mode === m ? "#1565c0" : "#e0e0e0",
+                backgroundColor: mode === m ? C.accent : C.fill,
               }}
             >
-              <Text style={{ color: mode === m ? "white" : "#333", fontWeight: "600" }}>
+              <Text style={{ color: mode === m ? C.surface : C.text, fontWeight: "600" }}>
                 {m === "pick" ? "Pick" : "Allocate points"}
               </Text>
             </Pressable>
           ))}
         </View>
 
-        <Text style={{ color: mismatch ? "#e65100" : "#777", marginBottom: 8 }}>
+        <Text style={{ color: mismatch ? C.warning : C.muted, marginBottom: 8 }}>
           {mode === "allocate" ? "Points" : "Selected"}: {total}
           {expected !== undefined ? ` (expected ${expected})` : ""}
           {mismatch ? " · the API accepts this but will add a warning" : ""}
         </Text>
 
         {options.isLoading && <ActivityIndicator style={{ marginTop: 24 }} />}
-        {options.error && <Text style={{ color: "#b71c1c" }}>{options.error.message}</Text>}
-        {action.error && <Text style={{ color: "#b71c1c" }}>{action.error.message}</Text>}
+        {options.error && <Text style={{ color: C.danger }}>{options.error.message}</Text>}
+        {action.error && <Text style={{ color: C.danger }}>{action.error.message}</Text>}
 
         <FlatList
           data={options.data}
@@ -147,7 +142,7 @@ export function ChoiceEditor({
                     alignItems: "center",
                     paddingVertical: 8,
                     borderBottomWidth: 1,
-                    borderColor: "#eee",
+                    borderColor: C.divider,
                     opacity: blocked ? 0.4 : 1,
                   }}
                 >
@@ -170,8 +165,8 @@ export function ChoiceEditor({
                   paddingVertical: 12,
                   paddingHorizontal: 8,
                   borderBottomWidth: 1,
-                  borderColor: "#eee",
-                  backgroundColor: selected ? "#e8f0fe" : "transparent",
+                  borderColor: C.divider,
+                  backgroundColor: selected ? C.accentSoft : "transparent",
                   opacity: blocked ? 0.4 : 1,
                 }}
               >
@@ -180,7 +175,7 @@ export function ChoiceEditor({
                   {label}
                 </Text>
                 {!item.eligible && !!item.reason && (
-                  <Text style={{ color: "#b71c1c", fontSize: 13 }}>{item.reason}</Text>
+                  <Text style={{ color: C.danger, fontSize: 13 }}>{item.reason}</Text>
                 )}
               </Pressable>
             );
@@ -190,17 +185,17 @@ export function ChoiceEditor({
         <Pressable
           disabled={action.isPending}
           onPress={save}
-          style={{ backgroundColor: "#1565c0", opacity: action.isPending ? 0.4 : 1, padding: 14, borderRadius: 8, alignItems: "center", marginTop: 8 }}
+          style={{ backgroundColor: C.accent, opacity: action.isPending ? 0.4 : 1, padding: 14, borderRadius: 8, alignItems: "center", marginTop: 8 }}
         >
-          <Text style={{ color: "white", fontWeight: "700" }}>Save</Text>
+          <Text style={{ color: C.onAccent, fontWeight: "700" }}>Save</Text>
         </Pressable>
         {editing && (
           <Pressable disabled={action.isPending} onPress={remove} style={{ padding: 14, alignItems: "center" }}>
-            <Text style={{ color: "#c62828", fontWeight: "600" }}>Remove this choice</Text>
+            <Text style={{ color: C.danger, fontWeight: "600" }}>Remove this choice</Text>
           </Pressable>
         )}
         <Pressable onPress={onClose} style={{ padding: 14, alignItems: "center" }}>
-          <Text style={{ color: "#1565c0", fontWeight: "600" }}>Cancel</Text>
+          <Text style={{ color: C.accent, fontWeight: "600" }}>Cancel</Text>
         </Pressable>
       </View>
     </Modal>
@@ -212,7 +207,7 @@ function Step({ label, disabled, onPress }: { label: string; disabled?: boolean;
     <Pressable
       disabled={disabled}
       onPress={onPress}
-      style={{ width: 36, height: 36, borderRadius: 8, backgroundColor: "#e0e0e0", alignItems: "center", justifyContent: "center" }}
+      style={{ width: 36, height: 36, borderRadius: 8, backgroundColor: C.fill, alignItems: "center", justifyContent: "center" }}
     >
       <Text style={{ fontSize: 20, fontWeight: "700" }}>{label}</Text>
     </Pressable>

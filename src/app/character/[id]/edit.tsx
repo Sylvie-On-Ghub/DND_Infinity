@@ -1,7 +1,8 @@
 import { useMutation, useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useLocalSearchParams } from "expo-router";
 import { useState } from "react";
-import { ActivityIndicator, FlatList, Modal, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
+import { ActivityIndicator, FlatList, Modal, Pressable, StyleSheet, View } from "react-native";
+import { Text, TextInput } from "@/components/Text";
 import { getCharacter, getContent, getSheet, levelUp, listContent, patchCharacter, setHp } from "@/lib/api/characters";
 import { ChoiceEditor } from "@/components/ChoiceEditor";
 import { LevelUpModal } from "@/components/LevelUpModal";
@@ -10,6 +11,7 @@ import type { Character, Sheet } from "@/lib/api/client";
 import { useCharacterPatch } from "@/lib/api/useCharacterPatch";
 import { useSheetAction } from "@/lib/api/useSheetAction";
 import { pretty } from "@/lib/format";
+import { C } from "@/lib/colors";
 
 const KEYS = ["str", "dex", "con", "int", "wis", "cha"] as const;
 
@@ -36,7 +38,7 @@ export default function EditPage() {
   if (!sheet || !character) {
     const err = sheetQ.error ?? charQ.error;
     return err ? (
-      <Text style={{ padding: 16, color: "#b71c1c" }}>{err.message}</Text>
+      <Text style={{ padding: 16, color: C.danger }}>{err.message}</Text>
     ) : (
       <ActivityIndicator style={{ flex: 1 }} />
     );
@@ -48,7 +50,7 @@ export default function EditPage() {
   return (
     <Page>
       {!!sheet.warnings?.length && (
-        <View style={{ backgroundColor: "#fff8e1", padding: 12, borderRadius: 8 }}>
+        <View style={{ backgroundColor: C.warningSoft, padding: 12, borderRadius: 8 }}>
           <Text style={{ fontWeight: "700", marginBottom: 4 }}>Warnings</Text>
           {sheet.warnings.map((w) => (
             <Text key={w.key}>• {w.message}</Text>
@@ -187,7 +189,7 @@ function IdentitySection({ id, character }: { id: string; character: Character }
 
       {picking && (
         <Modal visible animationType="slide" onRequestClose={() => setPicking(null)}>
-          <View style={{ flex: 1, padding: 16, paddingTop: 60 }}>
+          <View style={{ flex: 1, padding: 16, paddingTop: 60, backgroundColor: C.bg }}>
             <Text style={{ fontSize: 22, fontWeight: "700" }}>
               {picking === "race" ? "Choose race" : "Choose background"}
             </Text>
@@ -211,8 +213,8 @@ function IdentitySection({ id, character }: { id: string; character: Character }
                   style={{
                     paddingVertical: 14,
                     borderBottomWidth: 1,
-                    borderColor: "#eee",
-                    backgroundColor: item.id === currentValue ? "#e8f0fe" : "transparent",
+                    borderColor: C.divider,
+                    backgroundColor: item.id === currentValue ? C.accentSoft : "transparent",
                   }}
                 >
                   <Text style={{ fontSize: 17, fontWeight: item.id === currentValue ? "700" : "400" }}>
@@ -222,7 +224,7 @@ function IdentitySection({ id, character }: { id: string; character: Character }
               )}
             />
             <Pressable onPress={() => setPicking(null)} style={{ padding: 16, alignItems: "center" }}>
-              <Text style={{ color: "#1565c0", fontWeight: "600" }}>Cancel</Text>
+              <Text style={{ color: C.accent, fontWeight: "600" }}>Cancel</Text>
             </Pressable>
           </View>
         </Modal>
@@ -234,7 +236,7 @@ function IdentitySection({ id, character }: { id: string; character: Character }
 function IdentityRow({ label, value, onPress }: { label: string; value: string; onPress: () => void }) {
   return (
     <View style={[s.inline, { paddingVertical: 6 }]}>
-      <Text style={{ width: 100, color: "#555", fontWeight: "600" }}>{label}</Text>
+      <Text style={{ width: 100, color: C.textSecondary, fontWeight: "600" }}>{label}</Text>
       <Text style={{ flex: 1, fontSize: 16 }}>{value}</Text>
       <Btn label="Change" onPress={onPress} />
     </View>
@@ -341,10 +343,10 @@ function LevelSection({ id, character, sheet }: { id: string; character: Charact
                     paddingHorizontal: 12,
                     paddingVertical: 6,
                     borderRadius: 16,
-                    backgroundColor: method === m ? "#1565c0" : "#e0e0e0",
+                    backgroundColor: method === m ? C.accent : C.fill,
                   }}
                 >
-                  <Text style={{ color: method === m ? "white" : "#333", fontWeight: "600" }}>
+                  <Text style={{ color: method === m ? C.surface : C.text, fontWeight: "600" }}>
                     {pretty(m)}
                   </Text>
                 </Pressable>
@@ -353,10 +355,10 @@ function LevelSection({ id, character, sheet }: { id: string; character: Charact
           </View>
         )}
 
-        {!valid && <Text style={[s.muted, { marginTop: 8, color: "#b71c1c" }]}>Levels must be 1 to 20.</Text>}
+        {!valid && <Text style={[s.muted, { marginTop: 8, color: C.danger }]}>Levels must be 1 to 20.</Text>}
 
         {anyDown && (
-          <Text style={[s.muted, { marginTop: 8, color: "#e65100" }]}>
+          <Text style={[s.muted, { marginTop: 8, color: C.warning }]}>
             Lowering a level drops that level's HP entry. Choices made at the removed levels
             are not removed automatically, so check Choices below.
           </Text>
@@ -420,7 +422,7 @@ function SubclassSection({ id, character }: { id: string; character: Character }
           return (
             <View key={i} style={{ paddingVertical: 6, gap: 2 }}>
               <View style={s.inline}>
-                <Text style={{ width: 100, color: "#555", fontWeight: "600" }}>
+                <Text style={{ width: 100, color: C.textSecondary, fontWeight: "600" }}>
                   {def?.name ?? pretty(c.class_id)}
                 </Text>
                 <Text style={{ flex: 1, fontSize: 16 }}>{name}</Text>
@@ -439,7 +441,7 @@ function SubclassSection({ id, character }: { id: string; character: Character }
 
       {pickingClass && (
         <Modal visible animationType="slide" onRequestClose={() => setPicking(null)}>
-          <View style={{ flex: 1, padding: 16, paddingTop: 60 }}>
+          <View style={{ flex: 1, padding: 16, paddingTop: 60, backgroundColor: C.bg }}>
             <Text style={{ fontSize: 22, fontWeight: "700" }}>
               Choose {pickingDef?.data?.name ?? pretty(pickingClass.class_id)} subclass
             </Text>
@@ -460,8 +462,8 @@ function SubclassSection({ id, character }: { id: string; character: Character }
                     style={{
                       paddingVertical: 14,
                       borderBottomWidth: 1,
-                      borderColor: "#eee",
-                      backgroundColor: current ? "#e8f0fe" : "transparent",
+                      borderColor: C.divider,
+                      backgroundColor: current ? C.accentSoft : "transparent",
                     }}
                   >
                     <Text style={{ fontSize: 17, fontWeight: current ? "700" : "400" }}>
@@ -473,7 +475,7 @@ function SubclassSection({ id, character }: { id: string; character: Character }
             />
             {patch.error && <Text style={s.err}>{patch.error.message}</Text>}
             <Pressable onPress={() => setPicking(null)} style={{ padding: 16, alignItems: "center" }}>
-              <Text style={{ color: "#1565c0", fontWeight: "600" }}>Cancel</Text>
+              <Text style={{ color: C.accent, fontWeight: "600" }}>Cancel</Text>
             </Pressable>
           </View>
         </Modal>
@@ -637,23 +639,23 @@ function Btn({ label, disabled, onPress }: { label: string; disabled?: boolean; 
     <Pressable
       onPress={onPress}
       disabled={disabled}
-      style={{ backgroundColor: "#1565c0", opacity: disabled ? 0.4 : 1, paddingHorizontal: 16, paddingVertical: 10, borderRadius: 8, alignItems: "center" }}
+      style={{ backgroundColor: C.accent, opacity: disabled ? 0.4 : 1, paddingHorizontal: 16, paddingVertical: 10, borderRadius: 8, alignItems: "center" }}
     >
-      <Text style={{ color: "white", fontWeight: "700" }}>{label}</Text>
+      <Text style={{ color: C.onAccent, fontWeight: "700" }}>{label}</Text>
     </Pressable>
   );
 }
 
 const s = StyleSheet.create({
   section: { fontSize: 24, fontWeight: "600" },
-  sub: { fontSize: 14, fontWeight: "600", color: "#555" },
-  box: { borderWidth: 1, borderColor: "#999", borderRadius: 12, padding: 10, gap: 4 },
-  muted: { color: "#777", fontSize: 13 },
-  err: { color: "#b71c1c" },
-  link: { color: "#1565c0", fontSize: 16 },
-  listRow: { paddingVertical: 8, borderBottomWidth: StyleSheet.hairlineWidth, borderColor: "#ccc" },
+  sub: { fontSize: 14, fontWeight: "600", color: C.textSecondary },
+  box: { borderWidth: 1, borderColor: C.border, borderRadius: 12, padding: 10, backgroundColor: C.surface, gap: 4 },
+  muted: { color: C.muted, fontSize: 13 },
+  err: { color: C.danger },
+  link: { color: C.accent, fontSize: 16 },
+  listRow: { paddingVertical: 8, borderBottomWidth: StyleSheet.hairlineWidth, borderColor: C.border },
   inline: { flexDirection: "row", alignItems: "center", gap: 8 },
-  input: { borderWidth: 1, borderColor: "#ccc", borderRadius: 8, paddingHorizontal: 10, paddingVertical: 8, fontSize: 16, textAlign: "center", backgroundColor: "white", minWidth: 60 },
-  step: { width: 36, height: 36, borderRadius: 8, backgroundColor: "#e0e0e0", alignItems: "center", justifyContent: "center" },
+  input: { borderWidth: 1, borderColor: C.border, borderRadius: 8, paddingHorizontal: 10, paddingVertical: 8, fontSize: 16, textAlign: "center", backgroundColor: C.surface, minWidth: 60 },
+  step: { width: 36, height: 36, borderRadius: 8, backgroundColor: C.fill, alignItems: "center", justifyContent: "center" },
   stepText: { fontSize: 20, fontWeight: "700" },
 });
