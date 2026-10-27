@@ -1,11 +1,13 @@
 import { useQuery } from "@tanstack/react-query";
-import { FlatList, Pressable, Text } from "react-native";
+import { FlatList, Pressable } from "react-native";
+import { Text } from "@/components/Text";
 import { listContent } from "@/lib/api/characters";
 import type { InventoryView } from "@/lib/api/client";
 import { useSheetAction } from "@/lib/api/useSheetAction";
 import { pretty } from "@/lib/format";
 import { conjure } from "@/lib/pactWeapon";
 import { ModalShell, ui } from "./ui";
+import { C } from "@/lib/colors";
 
 export function ConjureModal({
   id,
@@ -43,7 +45,7 @@ export function ConjureModal({
             onPress={() =>
               action.mutate(() => conjure(id, item.id!, previous), { onSuccess: onClose })
             }
-            style={{ paddingVertical: 12, paddingHorizontal: 8, borderBottomWidth: 1, borderColor: "#eee", opacity: action.isPending ? 0.5 : 1 }}
+            style={{ paddingVertical: 12, paddingHorizontal: 8, borderBottomWidth: 1, borderColor: C.divider, opacity: action.isPending ? 0.5 : 1 }}
           >
             <Text style={{ fontSize: 16 }}>{item.name ?? pretty(item.id)}</Text>
           </Pressable>

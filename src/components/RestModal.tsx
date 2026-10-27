@@ -1,6 +1,8 @@
-import { Modal, Pressable, Text } from "react-native";
+import { Modal, Pressable } from "react-native";
+import { Text } from "@/components/Text";
 import { rest } from "@/lib/api/characters";
 import { useSheetAction } from "@/lib/api/useSheetAction";
+import { C } from "@/lib/colors";
 
 export function RestModal({
   id,
@@ -24,11 +26,11 @@ export function RestModal({
     <Modal visible={visible} transparent animationType="fade" onRequestClose={close}>
       <Pressable
         onPress={close}
-        style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.45)", justifyContent: "center", paddingHorizontal: 24 }}
+        style={{ flex: 1, backgroundColor: C.backdrop, justifyContent: "center", paddingHorizontal: 24 }}
       >
         <Pressable
           onPress={() => {}}
-          style={{ backgroundColor: "white", borderRadius: 12, padding: 16, gap: 12 }}
+          style={{ backgroundColor: C.surface, borderRadius: 12, padding: 16, gap: 12 }}
         >
           <Text style={{ fontSize: 20, fontWeight: "700" }}>Take a rest</Text>
 
@@ -46,7 +48,7 @@ export function RestModal({
           />
 
           {action.error && (
-            <Text style={{ color: "#b71c1c" }}>{action.error.message}</Text>
+            <Text style={{ color: C.danger }}>{action.error.message}</Text>
           )}
         </Pressable>
       </Pressable>
@@ -71,14 +73,14 @@ function Choice({
       disabled={disabled}
       style={{
         borderWidth: 1,
-        borderColor: "#bbb",
+        borderColor: C.border,
         borderRadius: 8,
         padding: 12,
         opacity: disabled ? 0.4 : 1,
       }}
     >
       <Text style={{ fontSize: 17, fontWeight: "700" }}>{title}</Text>
-      <Text style={{ color: "#555", marginTop: 2 }}>{body}</Text>
+      <Text style={{ color: C.textSecondary, marginTop: 2 }}>{body}</Text>
     </Pressable>
   );
 }

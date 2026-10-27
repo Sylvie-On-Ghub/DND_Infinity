@@ -1,12 +1,14 @@
 import { useQuery } from "@tanstack/react-query";
 import { useLocalSearchParams } from "expo-router";
 import { useState, type ReactNode } from "react";
-import { ActivityIndicator, Pressable, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, Pressable, StyleSheet, View } from "react-native";
+import { Text } from "@/components/Text";
 import { Page } from "@/components/Page";
 import { getSheet } from "@/lib/api/characters";
 import type { AttackView, SheetAction, SpellSourceView, SpellView } from "@/lib/api/client";
 import { COMBAT_ACTIONS, STANDARD_REACTIONS } from "@/lib/combatActions";
 import { damageText, pretty, signed } from "@/lib/format";
+import { C } from "@/lib/colors";
 
 const KNOWN_TYPES = ["action", "bonus_action", "reaction"];
 
@@ -32,7 +34,7 @@ export default function ActionsPage() {
   if (isLoading) return <ActivityIndicator style={{ flex: 1 }} />;
   if (error || !sheet) {
     return (
-      <Text style={{ padding: 16, color: "#b71c1c" }}>
+      <Text style={{ padding: 16, color: C.danger }}>
         {error?.message ?? "No sheet returned"}
       </Text>
     );
@@ -122,10 +124,10 @@ function AttackRow({ a }: { a: AttackView }) {
       <View style={s.row}>
         <Text style={[s.cell, { flex: 2.6, fontWeight: "700" }]}>
           {a.name}
-          {a.advantage && <Text style={{ color: "#2e7d32" }}> ▲</Text>}
-          {a.disadvantage && <Text style={{ color: "#c62828" }}> ▼</Text>}
+          {a.advantage && <Text style={{ color: C.success }}> ▲</Text>}
+          {a.disadvantage && <Text style={{ color: C.danger }}> ▼</Text>}
         </Text>
-        <Text style={[s.cell, { flex: 1.3, color: "#555" }]}>{rangeText(a)}</Text>
+        <Text style={[s.cell, { flex: 1.3, color: C.textSecondary }]}>{rangeText(a)}</Text>
         <Text style={[s.cell, { flex: 1, textAlign: "right", fontWeight: "700" }]}>
           {signed(a.to_hit)}
         </Text>
@@ -135,7 +137,7 @@ function AttackRow({ a }: { a: AttackView }) {
       </View>
       {!!sub && <Text style={s.sub}>{sub}</Text>}
       {a.proficient === false && (
-        <Text style={[s.sub, { color: "#e65100" }]}>Not proficient</Text>
+        <Text style={[s.sub, { color: C.warning }]}>Not proficient</Text>
       )}
     </View>
   );
@@ -238,18 +240,18 @@ function Item({ title, meta, lines }: { title: string; meta?: string; lines: str
 
 const s = StyleSheet.create({
   section: { fontSize: 24, fontWeight: "600" },
-  legend: { fontSize: 12, color: "#777" },
-  box: { borderWidth: 1, borderColor: "#999", borderRadius: 12, padding: 10, gap: 2 },
-  muted: { color: "#777", fontSize: 13 },
+  legend: { fontSize: 12, color: C.muted },
+  box: { borderWidth: 1, borderColor: C.border, borderRadius: 12, padding: 10, backgroundColor: C.surface, gap: 2 },
+  muted: { color: C.muted, fontSize: 13 },
   row: { flexDirection: "row", alignItems: "center", paddingVertical: 4 },
-  head: { fontSize: 12, color: "#777", fontWeight: "700" },
+  head: { fontSize: 12, color: C.muted, fontWeight: "700" },
   cell: { fontSize: 15 },
-  attack: { borderTopWidth: StyleSheet.hairlineWidth, borderColor: "#ccc", paddingVertical: 2 },
-  sub: { fontSize: 12, color: "#777", paddingBottom: 4 },
-  item: { paddingVertical: 8, borderTopWidth: StyleSheet.hairlineWidth, borderColor: "#ccc", gap: 4 },
+  attack: { borderTopWidth: StyleSheet.hairlineWidth, borderColor: C.border, paddingVertical: 2 },
+  sub: { fontSize: 12, color: C.muted, paddingBottom: 4 },
+  item: { paddingVertical: 8, borderTopWidth: StyleSheet.hairlineWidth, borderColor: C.border, gap: 4 },
   itemHead: { flexDirection: "row", alignItems: "center", gap: 8 },
   itemName: { flex: 1, fontSize: 16, fontWeight: "600" },
-  meta: { fontSize: 12, color: "#555" },
-  caret: { fontSize: 14, color: "#777" },
-  body: { fontSize: 14, color: "#333" },
+  meta: { fontSize: 12, color: C.textSecondary },
+  caret: { fontSize: 14, color: C.muted },
+  body: { fontSize: 14, color: C.text },
 });

@@ -1,5 +1,7 @@
 import type { ReactNode } from "react";
-import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Modal, Pressable, ScrollView, StyleSheet, View } from "react-native";
+import { Text } from "@/components/Text";
+import { C } from "@/lib/colors";
 
 export function ModalShell({
   title,
@@ -14,13 +16,13 @@ export function ModalShell({
 }) {
   return (
     <Modal visible animationType="slide" onRequestClose={onClose}>
-      <View style={{ flex: 1, paddingTop: 60 }}>
+      <View style={{ flex: 1, paddingTop: 60, backgroundColor: C.bg }}>
         <View style={{ flexDirection: "row", alignItems: "center", paddingHorizontal: 16, paddingBottom: 8 }}>
           <Text style={{ flex: 1, fontSize: 22, fontWeight: "700" }} numberOfLines={2}>
             {title}
           </Text>
           <Pressable onPress={onClose} hitSlop={12}>
-            <Text style={{ color: "#1565c0", fontWeight: "600", fontSize: 16 }}>Close</Text>
+            <Text style={{ color: C.accent, fontWeight: "600", fontSize: 16 }}>Close</Text>
           </Pressable>
         </View>
         {scroll ? (
@@ -42,7 +44,7 @@ export function Btn({
   label,
   onPress,
   disabled,
-  color = "#1565c0",
+  color = C.accent,
 }: {
   label: string;
   onPress: () => void;
@@ -55,7 +57,7 @@ export function Btn({
       disabled={disabled}
       style={{ backgroundColor: color, opacity: disabled ? 0.4 : 1, paddingHorizontal: 16, paddingVertical: 12, borderRadius: 8, alignItems: "center" }}
     >
-      <Text style={{ color: "white", fontWeight: "700" }}>{label}</Text>
+      <Text style={{ color: C.onAccent, fontWeight: "700" }}>{label}</Text>
     </Pressable>
   );
 }
@@ -64,17 +66,17 @@ export function Chip({ label, active, onPress }: { label: string; active: boolea
   return (
     <Pressable
       onPress={onPress}
-      style={{ paddingHorizontal: 12, paddingVertical: 6, borderRadius: 16, backgroundColor: active ? "#1565c0" : "#e0e0e0" }}
+      style={{ paddingHorizontal: 12, paddingVertical: 6, borderRadius: 16, backgroundColor: active ? C.accent : C.fill }}
     >
-      <Text style={{ color: active ? "white" : "#333", fontWeight: "600" }}>{label}</Text>
+      <Text style={{ color: active ? C.surface : C.text, fontWeight: "600" }}>{label}</Text>
     </Pressable>
   );
 }
 
 export const ui = StyleSheet.create({
-  input: { borderWidth: 1, borderColor: "#ccc", borderRadius: 8, paddingHorizontal: 12, paddingVertical: 10, fontSize: 16, backgroundColor: "white" },
-  label: { fontSize: 12, color: "#777", fontWeight: "600" },
-  muted: { color: "#777", fontSize: 13 },
-  err: { color: "#b71c1c" },
+  input: { borderWidth: 1, borderColor: C.border, borderRadius: 8, paddingHorizontal: 12, paddingVertical: 10, fontSize: 16, backgroundColor: C.surface },
+  label: { fontSize: 12, color: C.muted, fontWeight: "600" },
+  muted: { color: C.muted, fontSize: 13 },
+  err: { color: C.danger },
   row: { flexDirection: "row", alignItems: "center", gap: 8 },
 });

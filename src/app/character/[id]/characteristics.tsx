@@ -1,12 +1,14 @@
 import { useQuery } from "@tanstack/react-query";
 import { useLocalSearchParams } from "expo-router";
 import { useState } from "react";
-import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
+import { ActivityIndicator, Pressable, StyleSheet, View } from "react-native";
+import { Text, TextInput } from "@/components/Text";
 import { Page } from "@/components/Page";
 import { getCharacter, getSheet, setDetails } from "@/lib/api/characters";
 import type { Character, Sheet } from "@/lib/api/client";
 import { useCharacterPatch } from "@/lib/api/useCharacterPatch";
 import { pretty } from "@/lib/format";
+import { C } from "@/lib/colors";
 
 type Details = NonNullable<Character["details"]>;
 type Key = keyof Details;
@@ -70,7 +72,7 @@ export default function CharacteristicsPage() {
   if (!character || !sheet) {
     const err = charQ.error ?? sheetQ.error;
     return err ? (
-      <Text style={{ padding: 16, color: "#b71c1c" }}>{err.message}</Text>
+      <Text style={{ padding: 16, color: C.danger }}>{err.message}</Text>
     ) : (
       <ActivityIndicator style={{ flex: 1 }} />
     );
@@ -198,7 +200,7 @@ function LanguagesSection({ id, character, sheet }: { id: string; character: Cha
               hitSlop={4}
             >
               <Text style={s.langText}>{pretty(l)}</Text>
-              <Text style={{ color: "#b71c1c", fontWeight: "700" }}>×</Text>
+              <Text style={{ color: C.danger, fontWeight: "700" }}>×</Text>
             </Pressable>
           ))}
         </View>
@@ -245,7 +247,7 @@ function Dropdown({
   return (
     <View>
       <Pressable onPress={() => setOpen((o) => !o)} style={s.dropdown}>
-        <Text style={{ fontSize: 16, color: value ? "#000" : "#999" }}>{value || "None"}</Text>
+        <Text style={{ fontSize: 16, color: value ? C.text : C.placeholder }}>{value || "None"}</Text>
         <Text style={{ fontSize: 16 }}>{open ? "▴" : "▾"}</Text>
       </Pressable>
       {open && (
@@ -254,7 +256,7 @@ function Dropdown({
             <Pressable
               key={o || "__none"}
               onPress={() => pick(o)}
-              style={{ padding: 12, backgroundColor: o === value ? "#e8f0fe" : "transparent" }}
+              style={{ padding: 12, backgroundColor: o === value ? C.accentSoft : "transparent" }}
             >
               <Text style={{ fontSize: 16, fontWeight: o === value ? "700" : "400" }}>
                 {o || "None"}
@@ -272,25 +274,25 @@ function Btn({ label, disabled, onPress }: { label: string; disabled?: boolean; 
     <Pressable
       onPress={onPress}
       disabled={disabled}
-      style={{ backgroundColor: "#1565c0", opacity: disabled ? 0.4 : 1, paddingHorizontal: 16, paddingVertical: 10, borderRadius: 8, alignItems: "center" }}
+      style={{ backgroundColor: C.accent, opacity: disabled ? 0.4 : 1, paddingHorizontal: 16, paddingVertical: 10, borderRadius: 8, alignItems: "center" }}
     >
-      <Text style={{ color: "white", fontWeight: "700" }}>{label}</Text>
+      <Text style={{ color: C.onAccent, fontWeight: "700" }}>{label}</Text>
     </Pressable>
   );
 }
 
 const s = StyleSheet.create({
   section: { fontSize: 24, fontWeight: "600" },
-  sub: { fontSize: 14, fontWeight: "600", color: "#555" },
-  box: { borderWidth: 1, borderColor: "#999", borderRadius: 12, padding: 10, gap: 4 },
-  muted: { color: "#777", fontSize: 13 },
-  err: { color: "#b71c1c" },
-  input: { borderWidth: 1, borderColor: "#ccc", borderRadius: 8, paddingHorizontal: 10, paddingVertical: 8, fontSize: 16, backgroundColor: "white" },
-  dropdown: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", borderWidth: 1, borderColor: "#ccc", borderRadius: 8, paddingHorizontal: 10, paddingVertical: 10, backgroundColor: "white" },
+  sub: { fontSize: 14, fontWeight: "600", color: C.textSecondary },
+  box: { borderWidth: 1, borderColor: C.border, borderRadius: 12, padding: 10, backgroundColor: C.surface, gap: 4 },
+  muted: { color: C.muted, fontSize: 13 },
+  err: { color: C.danger },
+  input: { borderWidth: 1, borderColor: C.border, borderRadius: 8, paddingHorizontal: 10, paddingVertical: 8, fontSize: 16, backgroundColor: C.surface },
+  dropdown: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", borderWidth: 1, borderColor: C.border, borderRadius: 8, paddingHorizontal: 10, paddingVertical: 10, backgroundColor: C.surface },
   inline: { flexDirection: "row", alignItems: "center", gap: 8 },
   langs: { flexDirection: "row", flexWrap: "wrap", gap: 6 },
-  lang: { flexDirection: "row", alignItems: "center", gap: 6, borderWidth: 1, borderColor: "#999", borderRadius: 16, paddingHorizontal: 12, paddingVertical: 4, backgroundColor: "white" },
-  langExtra: { borderColor: "#1565c0", backgroundColor: "#e8f0fe" },
+  lang: { flexDirection: "row", alignItems: "center", gap: 6, borderWidth: 1, borderColor: C.border, borderRadius: 16, paddingHorizontal: 12, paddingVertical: 4, backgroundColor: C.surface },
+  langExtra: { borderColor: C.accent, backgroundColor: C.accentSoft },
   langText: { fontSize: 15, fontWeight: "600" },
-  menu: { borderWidth: 1, borderColor: "#ccc", borderRadius: 8, marginTop: 4, backgroundColor: "white" },
+  menu: { borderWidth: 1, borderColor: C.border, borderRadius: 8, marginTop: 4, backgroundColor: C.surface },
 });

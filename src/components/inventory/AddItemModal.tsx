@@ -1,11 +1,13 @@
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
-import { FlatList, Pressable, Text, TextInput, View } from "react-native";
+import { FlatList, Pressable, View } from "react-native";
+import { Text, TextInput } from "@/components/Text";
 import { addItem, listContent } from "@/lib/api/characters";
 import type { AddItemRequest } from "@/lib/api/client";
 import { useSheetAction } from "@/lib/api/useSheetAction";
 import { pretty } from "@/lib/format";
 import { Btn, Chip, ModalShell, ui } from "./ui";
+import { C } from "@/lib/colors";
 
 export function AddItemModal({
   id,
@@ -83,7 +85,7 @@ export function AddItemModal({
             renderItem={({ item }) => (
               <Pressable
                 onPress={() => setPicked(item.id!)}
-                style={{ paddingVertical: 12, paddingHorizontal: 8, borderBottomWidth: 1, borderColor: "#eee", backgroundColor: picked === item.id ? "#e8f0fe" : "transparent" }}
+                style={{ paddingVertical: 12, paddingHorizontal: 8, borderBottomWidth: 1, borderColor: C.divider, backgroundColor: picked === item.id ? C.accentSoft : "transparent" }}
               >
                 <Text style={{ fontSize: 16, fontWeight: picked === item.id ? "700" : "400" }}>
                   {picked === item.id ? "✓ " : ""}

@@ -1,21 +1,16 @@
 import { useQuery } from "@tanstack/react-query";
 import { useLocalSearchParams } from "expo-router";
 import { useState } from "react";
-import {
-  ActivityIndicator,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Switch,
-  Text,
-  TextInput,
-  View,
-} from "react-native";
+import { ActivityIndicator, Pressable, StyleSheet, Switch, View } from "react-native";
+// Gesture-handler's ScrollView, so scrolling the chip row wins over the page-swipe gesture.
+import { ScrollView } from "react-native-gesture-handler";
+import { Text, TextInput } from "@/components/Text";
 import { Page } from "@/components/Page";
 import { getSheet, restoreSlot, spendSlot } from "@/lib/api/characters";
 import type { Sheet, SpellEffectView, SpellSourceView, SpellView } from "@/lib/api/client";
 import { useSheetAction } from "@/lib/api/useSheetAction";
 import { damageText, levelLabel, pretty, shortRange, shortTime, signed } from "@/lib/format";
+import { C } from "@/lib/colors";
 
 export default function SpellsPage() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -32,7 +27,7 @@ export default function SpellsPage() {
   if (isLoading) return <ActivityIndicator style={{ flex: 1 }} />;
   if (error || !sheet) {
     return (
-      <Text style={{ padding: 16, color: "#b71c1c" }}>
+      <Text style={{ padding: 16, color: C.danger }}>
         {error?.message ?? "No sheet returned"}
       </Text>
     );
@@ -142,7 +137,7 @@ export default function SpellsPage() {
       <View style={s.box}>
         <View style={s.toggleRow}>
           <Text style={{ flex: 1, fontSize: 15 }}>Show upcast</Text>
-          <Switch value={upcast} onValueChange={setUpcast} />
+          <Switch trackColor={{ true: C.accent, false: C.fillStrong }} value={upcast} onValueChange={setUpcast} />
         </View>
 
         <View style={s.row}>
@@ -280,7 +275,7 @@ function Slots({ id, sheet }: { id: string; sheet: Sheet }) {
           onRestore={() => action.mutate(() => restoreSlot(id, pact.level ?? 1, true))}
         />
       )}
-      {action.error && <Text style={{ color: "#b71c1c" }}>{action.error.message}</Text>}
+      {action.error && <Text style={{ color: C.danger }}>{action.error.message}</Text>}
     </View>
   );
 }
@@ -329,7 +324,7 @@ function PipRow({
 function Chip({ label, active, onPress }: { label: string; active: boolean; onPress: () => void }) {
   return (
     <Pressable onPress={onPress} style={[s.chip, active && s.chipActive]}>
-      <Text style={{ color: active ? "white" : "#333", fontWeight: "600" }}>{label}</Text>
+      <Text style={{ color: active ? C.surface : C.text, fontWeight: "600" }}>{label}</Text>
     </Pressable>
   );
 }
@@ -344,27 +339,27 @@ function Stat({ label, value }: { label: string; value: string }) {
 }
 
 const s = StyleSheet.create({
-  box: { borderWidth: 1, borderColor: "#999", borderRadius: 12, padding: 10, gap: 4 },
-  muted: { color: "#777", fontSize: 13 },
-  sub: { fontSize: 12, color: "#777" },
-  label: { fontSize: 12, color: "#777", fontWeight: "600" },
-  input: { borderWidth: 1, borderColor: "#999", borderRadius: 8, paddingHorizontal: 12, paddingVertical: 8, fontSize: 16, backgroundColor: "white" },
+  box: { borderWidth: 1, borderColor: C.border, borderRadius: 12, padding: 10, backgroundColor: C.surface, gap: 4 },
+  muted: { color: C.muted, fontSize: 13 },
+  sub: { fontSize: 12, color: C.muted },
+  label: { fontSize: 12, color: C.muted, fontWeight: "600" },
+  input: { borderWidth: 1, borderColor: C.border, borderRadius: 8, paddingHorizontal: 12, paddingVertical: 8, fontSize: 16, backgroundColor: C.surface },
   chips: { flexDirection: "row", gap: 8, flexWrap: "wrap" },
-  chip: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 16, backgroundColor: "#e0e0e0" },
-  chipActive: { backgroundColor: "#1565c0" },
+  chip: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 16, backgroundColor: C.fill },
+  chipActive: { backgroundColor: C.accent },
   stats: { flexDirection: "row" },
   toggleRow: { flexDirection: "row", alignItems: "center", paddingBottom: 4 },
   row: { flexDirection: "row", alignItems: "center", paddingVertical: 4 },
-  head: { fontSize: 12, color: "#777", fontWeight: "700" },
+  head: { fontSize: 12, color: C.muted, fontWeight: "700" },
   levelHead: { fontSize: 20, fontWeight: "600", marginTop: 10, marginBottom: 2 },
-  spell: { borderTopWidth: StyleSheet.hairlineWidth, borderColor: "#ccc", paddingVertical: 2 },
+  spell: { borderTopWidth: StyleSheet.hairlineWidth, borderColor: C.border, paddingVertical: 2 },
   cell: { fontSize: 14 },
-  tag: { fontSize: 11, color: "#777", fontWeight: "700" },
-  source: { fontSize: 11, color: "#777", fontWeight: "400" },
+  tag: { fontSize: 11, color: C.muted, fontWeight: "700" },
+  source: { fontSize: 11, color: C.muted, fontWeight: "400" },
   statCell: { flex: 1, textAlign: "right" },
-  upcast: { fontSize: 12, color: "#1565c0", paddingBottom: 4 },
-  body: { fontSize: 14, color: "#333", paddingBottom: 4 },
+  upcast: { fontSize: 12, color: C.accent, paddingBottom: 4 },
+  body: { fontSize: 14, color: C.text, paddingBottom: 4 },
   pipRow: { flexDirection: "row", alignItems: "center", gap: 8, paddingVertical: 4 },
-  pip: { width: 26, height: 26, borderRadius: 13, borderWidth: 2, borderColor: "#1565c0", backgroundColor: "white" },
-  pipFull: { backgroundColor: "#1565c0" },
+  pip: { width: 26, height: 26, borderRadius: 13, borderWidth: 2, borderColor: C.accent, backgroundColor: C.surface },
+  pipFull: { backgroundColor: C.accent },
 });

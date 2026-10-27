@@ -1,7 +1,8 @@
 import { useQueries, useQuery } from "@tanstack/react-query";
 import { useLocalSearchParams } from "expo-router";
 import { useState } from "react";
-import { ActivityIndicator, Pressable, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, Pressable, StyleSheet, View } from "react-native";
+import { Text } from "@/components/Text";
 import { AddItemModal } from "@/components/inventory/AddItemModal";
 import { CoinsModal } from "@/components/inventory/CoinsModal";
 import { ConjureModal } from "@/components/inventory/ConjureModal";
@@ -13,6 +14,7 @@ import type { InventoryView } from "@/lib/api/client";
 import { useSheetAction } from "@/lib/api/useSheetAction";
 import { pretty } from "@/lib/format";
 import { bondedEntryId, hasPactOfTheBlade } from "@/lib/pactWeapon";
+import { C } from "@/lib/colors";
 
 export default function InventoryPage() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -52,7 +54,7 @@ export default function InventoryPage() {
   if (isLoading) return <ActivityIndicator style={{ flex: 1 }} />;
   if (error || !sheet) {
     return (
-      <Text style={{ padding: 16, color: "#b71c1c" }}>
+      <Text style={{ padding: 16, color: C.danger }}>
         {error?.message ?? "No sheet returned"}
       </Text>
     );
@@ -112,7 +114,7 @@ export default function InventoryPage() {
         <Text style={s.hint}>Tap to gain, spend or convert coins</Text>
       </Pressable>
 
-      {action.error && <Text style={{ color: "#b71c1c" }}>{action.error.message}</Text>}
+      {action.error && <Text style={{ color: C.danger }}>{action.error.message}</Text>}
 
       {pactOn && (
         <View style={s.box}>
@@ -124,7 +126,7 @@ export default function InventoryPage() {
           </Text>
           <Btn
             label={bonded ? "Conjure a different weapon" : "Conjure pact weapon"}
-            color="#6a1b9a"
+            color={C.magic}
             onPress={() => setConjuring(true)}
           />
         </View>
@@ -246,11 +248,11 @@ function Section({
               hitSlop={6}
               style={[s.check, e.equipped && s.checkOn]}
             >
-              {e.equipped && <Text style={{ color: "white", fontWeight: "700" }}>✓</Text>}
+              {e.equipped && <Text style={{ color: C.onAccent, fontWeight: "700" }}>✓</Text>}
             </Pressable>
           )}
           <Pressable style={{ flex: 5.1, flexDirection: "row" }} onPress={() => onOpen(e)}>
-            <Text style={[s.cell, { flex: 3 }, e.stashed && { color: "#999" }]}>
+            <Text style={[s.cell, { flex: 3 }, e.stashed && { color: C.border }]}>
               {e.name}
               {e.attuned && <Text style={s.tag}> ◆</Text>}
               {e.entry_id === bondedId && <Text style={s.pact}> Pact</Text>}
@@ -272,22 +274,22 @@ function Section({
 }
 
 const s = StyleSheet.create({
-  box: { borderWidth: 1, borderColor: "#999", borderRadius: 12, padding: 10, gap: 4 },
+  box: { borderWidth: 1, borderColor: C.border, borderRadius: 12, padding: 10, backgroundColor: C.surface, gap: 4 },
   coinRow: { flexDirection: "row", justifyContent: "space-around" },
   coin: { alignItems: "center" },
-  label: { fontSize: 12, color: "#777", fontWeight: "600" },
+  label: { fontSize: 12, color: C.muted, fontWeight: "600" },
   coinValue: { fontSize: 20, fontWeight: "700" },
   total: { fontSize: 22, fontWeight: "700", textAlign: "center", marginTop: 6 },
-  hint: { fontSize: 11, color: "#999", textAlign: "center" },
-  muted: { color: "#777", fontSize: 13, textAlign: "center" },
+  hint: { fontSize: 11, color: C.border, textAlign: "center" },
+  muted: { color: C.muted, fontSize: 13, textAlign: "center" },
   headerRow: { flexDirection: "row", alignItems: "center", paddingBottom: 4 },
   section: { fontSize: 20, fontWeight: "600" },
   row: { flexDirection: "row", alignItems: "center", paddingVertical: 4 },
-  item: { borderTopWidth: StyleSheet.hairlineWidth, borderColor: "#ccc", paddingVertical: 8 },
-  head: { fontSize: 12, color: "#777", fontWeight: "700" },
+  item: { borderTopWidth: StyleSheet.hairlineWidth, borderColor: C.border, paddingVertical: 8 },
+  head: { fontSize: 12, color: C.muted, fontWeight: "700" },
   cell: { fontSize: 15 },
-  tag: { fontSize: 12, color: "#777" },
-  pact: { fontSize: 12, color: "#6a1b9a", fontWeight: "700" },
-  check: { width: 24, height: 24, marginRight: 10, borderRadius: 6, borderWidth: 2, borderColor: "#555", alignItems: "center", justifyContent: "center", backgroundColor: "white" },
-  checkOn: { backgroundColor: "#1565c0", borderColor: "#1565c0" },
+  tag: { fontSize: 12, color: C.muted },
+  pact: { fontSize: 12, color: C.magic, fontWeight: "700" },
+  check: { width: 24, height: 24, marginRight: 10, borderRadius: 6, borderWidth: 2, borderColor: C.textSecondary, alignItems: "center", justifyContent: "center", backgroundColor: C.surface },
+  checkOn: { backgroundColor: C.accent, borderColor: C.accent },
 });

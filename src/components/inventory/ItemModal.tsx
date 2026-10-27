@@ -1,11 +1,13 @@
 import { useState } from "react";
-import { Pressable, Switch, Text, TextInput, View } from "react-native";
+import { Pressable, Switch, View } from "react-native";
+import { Text, TextInput } from "@/components/Text";
 import { changeQuantity, moveEntry, patchEntry, removeEntry } from "@/lib/api/characters";
 import type { EntryPatch, InventoryView } from "@/lib/api/client";
 import { useSheetAction } from "@/lib/api/useSheetAction";
 import { pretty } from "@/lib/format";
 import { bondExisting, endBond, isConjured } from "@/lib/pactWeapon";
 import { Btn, ModalShell, ui } from "./ui";
+import { C } from "@/lib/colors";
 
 export function ItemModal({
   id,
@@ -80,7 +82,7 @@ export function ItemModal({
               </Text>
               <Btn
                 label={isConjured(entry) ? "Dismiss (weapon disappears)" : "End bond"}
-                color="#6a1b9a"
+                color={C.magic}
                 disabled={busy}
                 onPress={() =>
                   action.mutate(() => endBond(id, entry), isConjured(entry) ? { onSuccess: onClose } : undefined)
@@ -95,7 +97,7 @@ export function ItemModal({
               </Text>
               <Btn
                 label="Bond as pact weapon"
-                color="#6a1b9a"
+                color={C.magic}
                 disabled={busy}
                 onPress={() => action.mutate(() => bondExisting(id, eid, pact.previous))}
               />
@@ -116,7 +118,7 @@ export function ItemModal({
           key={d.id || "top"}
           disabled={busy || d.id === here}
           onPress={() => action.mutate(() => moveEntry(id, eid, d.id))}
-          style={{ padding: 12, borderRadius: 8, borderWidth: 1, borderColor: "#ccc", backgroundColor: d.id === here ? "#e8f0fe" : "white" }}
+          style={{ padding: 12, borderRadius: 8, borderWidth: 1, borderColor: C.border, backgroundColor: d.id === here ? C.accentSoft : C.surface }}
         >
           <Text style={{ fontWeight: d.id === here ? "700" : "400" }}>
             {d.id === here ? "✓ " : ""}
@@ -131,12 +133,12 @@ export function ItemModal({
       <View style={{ gap: 8, marginTop: 8 }}>
         <Btn
           label={isContainer && hasContents ? "Remove (contents move out)" : "Remove"}
-          color="#c62828"
+          color={C.danger}
           disabled={busy}
           onPress={() => remove(false)}
         />
         {isContainer && hasContents && (
-          <Btn label="Remove and delete contents" color="#8e0000" disabled={busy} onPress={() => remove(true)} />
+          <Btn label="Remove and delete contents" color={C.dangerDark} disabled={busy} onPress={() => remove(true)} />
         )}
       </View>
     </ModalShell>
@@ -147,7 +149,7 @@ function Toggle({ label, value, disabled, onChange }: { label: string; value: bo
   return (
     <View style={ui.row}>
       <Text style={{ flex: 1, fontSize: 16 }}>{label}</Text>
-      <Switch value={value} disabled={disabled} onValueChange={onChange} />
+      <Switch trackColor={{ true: C.accent, false: C.fillStrong }} value={value} disabled={disabled} onValueChange={onChange} />
     </View>
   );
 }
@@ -157,7 +159,7 @@ function Step({ label, disabled, onPress }: { label: string; disabled?: boolean;
     <Pressable
       disabled={disabled}
       onPress={onPress}
-      style={{ width: 40, height: 40, borderRadius: 8, backgroundColor: "#e0e0e0", alignItems: "center", justifyContent: "center", opacity: disabled ? 0.5 : 1 }}
+      style={{ width: 40, height: 40, borderRadius: 8, backgroundColor: C.fill, alignItems: "center", justifyContent: "center", opacity: disabled ? 0.5 : 1 }}
     >
       <Text style={{ fontSize: 22, fontWeight: "700" }}>{label}</Text>
     </Pressable>

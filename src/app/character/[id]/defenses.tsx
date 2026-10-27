@@ -1,9 +1,11 @@
 import { useQuery } from "@tanstack/react-query";
 import { useLocalSearchParams } from "expo-router";
-import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, StyleSheet, View } from "react-native";
+import { Text } from "@/components/Text";
 import { Page } from "@/components/Page";
 import { getSheet } from "@/lib/api/characters";
 import { pretty } from "@/lib/format";
+import { C } from "@/lib/colors";
 
 // Walking first, then the rest in this order; unknown types go last.
 const SPEED_ORDER = ["walk", "fly", "swim", "climb", "burrow"];
@@ -19,7 +21,7 @@ export default function DefensesPage() {
   if (isLoading) return <ActivityIndicator style={{ flex: 1 }} />;
   if (error || !sheet) {
     return (
-      <Text style={{ padding: 16, color: "#b71c1c" }}>
+      <Text style={{ padding: 16, color: C.danger }}>
         {error?.message ?? "No sheet returned"}
       </Text>
     );
@@ -74,28 +76,28 @@ function DamageList({ title, items = [] }: { title: string; items?: string[] }) 
 
 const s = StyleSheet.create({
   section: { fontSize: 24, fontWeight: "600" },
-  box: { borderWidth: 1, borderColor: "#999", borderRadius: 12, padding: 10 },
-  muted: { color: "#777" },
+  box: { borderWidth: 1, borderColor: C.border, borderRadius: 12, padding: 10, backgroundColor: C.surface },
+  muted: { color: C.muted },
   speedRow: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
   speed: {
     minWidth: 90,
     alignItems: "center",
     borderWidth: 1,
-    borderColor: "#999",
+    borderColor: C.border,
     borderRadius: 10,
     paddingVertical: 6,
     paddingHorizontal: 10,
-    backgroundColor: "white",
+    backgroundColor: C.surface,
   },
   speedValue: { fontSize: 22, fontWeight: "700" },
-  speedLabel: { fontSize: 13, color: "#555" },
+  speedLabel: { fontSize: 13, color: C.textSecondary },
   chips: { flexDirection: "row", flexWrap: "wrap", gap: 6 },
   chip: {
     borderWidth: 1,
-    borderColor: "#999",
+    borderColor: C.border,
     borderRadius: 16,
     paddingHorizontal: 12,
     paddingVertical: 4,
-    backgroundColor: "white",
+    backgroundColor: C.surface,
   },
 });

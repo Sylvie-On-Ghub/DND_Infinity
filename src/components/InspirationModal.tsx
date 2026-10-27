@@ -1,7 +1,9 @@
 import { useQuery } from "@tanstack/react-query";
-import { Modal, Pressable, Text, View } from "react-native";
+import { Modal, Pressable, View } from "react-native";
+import { Text } from "@/components/Text";
 import { getRuleset } from "@/lib/api/characters";
 import { useCharacterPatch } from "@/lib/api/useCharacterPatch";
+import { C } from "@/lib/colors";
 
 export function InspirationModal({
   id,
@@ -38,11 +40,11 @@ export function InspirationModal({
       {/* Backdrop: tap outside to dismiss. */}
       <Pressable
         onPress={close}
-        style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.45)", paddingTop: 110, paddingHorizontal: 24 }}
+        style={{ flex: 1, backgroundColor: C.backdrop, paddingTop: 110, paddingHorizontal: 24 }}
       >
         <Pressable
           onPress={() => {}}
-          style={{ backgroundColor: "white", borderRadius: 12, padding: 16, gap: 12 }}
+          style={{ backgroundColor: C.surface, borderRadius: 12, padding: 16, gap: 12 }}
         >
           <Text style={{ fontSize: 20, fontWeight: "700" }}>Inspiration</Text>
 
@@ -51,19 +53,19 @@ export function InspirationModal({
             <View style={{ flex: 1, alignItems: "center", gap: 4 }}>
               <Text style={{ fontSize: 32, fontWeight: "700" }}>
                 {current}
-                {max !== undefined && <Text style={{ fontSize: 18, color: "#777" }}> / {max}</Text>}
+                {max !== undefined && <Text style={{ fontSize: 18, color: C.muted }}> / {max}</Text>}
               </Text>
-              <Text style={{ fontSize: 18, color: "#1565c0" }}>
+              <Text style={{ fontSize: 18, color: C.accent }}>
                 {current > 0 ? "●".repeat(Math.min(current, 10)) : "–"}
               </Text>
             </View>
             <Step label="+" disabled={!canRaise} onPress={() => change(1)} />
           </View>
 
-          {patch.error && <Text style={{ color: "#b71c1c" }}>{patch.error.message}</Text>}
+          {patch.error && <Text style={{ color: C.danger }}>{patch.error.message}</Text>}
 
           <Pressable onPress={close} style={{ padding: 8, alignItems: "center" }}>
-            <Text style={{ color: "#1565c0", fontWeight: "600" }}>Done</Text>
+            <Text style={{ color: C.accent, fontWeight: "600" }}>Done</Text>
           </Pressable>
         </Pressable>
       </Pressable>
@@ -81,7 +83,7 @@ function Step({ label, disabled, onPress }: { label: string; disabled: boolean; 
         width: 56,
         height: 56,
         borderRadius: 10,
-        backgroundColor: "#e0e0e0",
+        backgroundColor: C.fill,
         opacity: disabled ? 0.35 : 1,
         alignItems: "center",
         justifyContent: "center",

@@ -1,8 +1,10 @@
 import { Image } from "expo-image";
 import { useState } from "react";
-import { Modal, Pressable, Text, TextInput, View } from "react-native";
+import { Modal, Pressable, View } from "react-native";
+import { Text, TextInput } from "@/components/Text";
 import { setPortrait } from "@/lib/api/characters";
 import { useCharacterPatch } from "@/lib/api/useCharacterPatch";
+import { C } from "@/lib/colors";
 
 export function PortraitModal({
   id,
@@ -37,24 +39,24 @@ export function PortraitModal({
       {/* Backdrop: tap outside to dismiss. Card sits near the top so the keyboard won't cover it. */}
       <Pressable
         onPress={close}
-        style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.45)", paddingTop: 110, paddingHorizontal: 24 }}
+        style={{ flex: 1, backgroundColor: C.backdrop, paddingTop: 110, paddingHorizontal: 24 }}
       >
         <Pressable
           onPress={() => {}}
-          style={{ backgroundColor: "white", borderRadius: 12, padding: 16, gap: 12 }}
+          style={{ backgroundColor: C.surface, borderRadius: 12, padding: 16, gap: 12 }}
         >
           <Text style={{ fontSize: 20, fontWeight: "700" }}>Portrait</Text>
 
           {valid && (
             <View style={{ alignItems: "center" }}>
               {broken ? (
-                <Text style={{ color: "#b71c1c" }}>Couldn’t load an image from that link.</Text>
+                <Text style={{ color: C.danger }}>Couldn’t load an image from that link.</Text>
               ) : (
                 <Image
                   source={{ uri: trimmed }}
                   contentFit="cover"
                   onError={() => setBrokenUrl(trimmed)}
-                  style={{ width: 120, height: 120, borderRadius: 16, backgroundColor: "#cfd8dc" }}
+                  style={{ width: 120, height: 120, borderRadius: 16, backgroundColor: C.fillStrong }}
                 />
               )}
             </View>
@@ -68,29 +70,29 @@ export function PortraitModal({
             autoCapitalize="none"
             autoCorrect={false}
             keyboardType="url"
-            style={{ borderWidth: 1, borderColor: "#ccc", borderRadius: 8, padding: 12, fontSize: 16 }}
+            style={{ borderWidth: 1, borderColor: C.border, borderRadius: 8, padding: 12, fontSize: 16 }}
           />
 
           <View style={{ flexDirection: "row", gap: 8 }}>
             <Action
               label="Save"
-              color="#1565c0"
+              color={C.accent}
               disabled={!valid || trimmed === current || busy}
               onPress={() => save(trimmed)}
             />
             <Action
               label="Remove"
-              color="#c62828"
+              color={C.danger}
               disabled={!current || busy}
               onPress={() => save(null)}
             />
           </View>
 
-          <Text style={{ color: "#777", fontSize: 12 }}>
+          <Text style={{ color: C.muted, fontSize: 12 }}>
             Only the link is saved, so the image has to stay online at that address.
           </Text>
 
-          {patch.error && <Text style={{ color: "#b71c1c" }}>{patch.error.message}</Text>}
+          {patch.error && <Text style={{ color: C.danger }}>{patch.error.message}</Text>}
         </Pressable>
       </Pressable>
     </Modal>
@@ -121,7 +123,7 @@ function Action({
         alignItems: "center",
       }}
     >
-      <Text style={{ color: "white", fontWeight: "700" }}>{label}</Text>
+      <Text style={{ color: C.onAccent, fontWeight: "700" }}>{label}</Text>
     </Pressable>
   );
 }

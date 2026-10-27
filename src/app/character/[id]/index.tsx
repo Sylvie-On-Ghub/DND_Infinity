@@ -1,9 +1,11 @@
 import { useQuery } from "@tanstack/react-query";
 import { useLocalSearchParams } from "expo-router";
-import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, StyleSheet, View } from "react-native";
+import { Text } from "@/components/Text";
 import { Page } from "@/components/Page";
 import { getSheet } from "@/lib/api/characters";
 import type { AbilityView, Modifier } from "@/lib/api/client";
+import { C } from "@/lib/colors";
 
 const ABILITIES = [
   ["str", "Str"],
@@ -34,7 +36,7 @@ export default function AbilitiesPage() {
   if (isLoading) return <ActivityIndicator style={{ flex: 1 }} />;
   if (error || !sheet) {
     return (
-      <Text style={{ padding: 16, color: "#b71c1c" }}>
+      <Text style={{ padding: 16, color: C.danger }}>
         {error?.message ?? "No sheet returned"}
       </Text>
     );
@@ -82,7 +84,7 @@ export default function AbilitiesPage() {
       <View style={{ gap: 8 }}>
         <Text style={s.section}>Senses</Text>
         <View style={[s.box, { minHeight: 70 }]}>
-          {senses.length === 0 && <Text style={{ color: "#777" }}>None</Text>}
+          {senses.length === 0 && <Text style={{ color: C.muted }}>None</Text>}
           {senses.map((x, i) => (
             <Text key={i} style={{ fontSize: 16 }}>
               {pretty(x.name)}
@@ -139,10 +141,10 @@ function noteText(m: Modifier): string {
 
 function NoteRow({ m }: { m: Modifier }) {
   const icon =
-    m.kind === "advantage" ? { t: "▲", c: "#2e7d32" }
-    : m.kind === "disadvantage" ? { t: "▼", c: "#c62828" }
-    : m.kind === "add" ? { t: (m.value ?? 0) >= 0 ? "+" : "−", c: "#1565c0" }
-    : { t: "•", c: "#555" };
+    m.kind === "advantage" ? { t: "▲", c: C.success }
+    : m.kind === "disadvantage" ? { t: "▼", c: C.danger }
+    : m.kind === "add" ? { t: (m.value ?? 0) >= 0 ? "+" : "−", c: C.accent }
+    : { t: "•", c: C.textSecondary };
 
   return (
     <View style={{ flexDirection: "row", alignItems: "center", gap: 10, paddingVertical: 4 }}>
@@ -152,7 +154,7 @@ function NoteRow({ m }: { m: Modifier }) {
       <Text style={{ flex: 1, fontSize: 14 }}>
         {noteText(m)}
         {!!m.source_id && (
-          <Text style={{ color: "#777" }}> ({pretty(m.source_id)})</Text>
+          <Text style={{ color: C.muted }}> ({pretty(m.source_id)})</Text>
         )}
       </Text>
     </View>
@@ -161,12 +163,13 @@ function NoteRow({ m }: { m: Modifier }) {
 
 const s = StyleSheet.create({
 grid: {
+  backgroundColor: C.surface,
   flexDirection: "row",
   flexWrap: "wrap",
   justifyContent: "space-between",
   rowGap: 14,
   borderWidth: 1,
-  borderColor: "#999",
+  borderColor: C.border,
   borderRadius: 12,
   paddingVertical: 12,
   paddingLeft: 10,
@@ -175,13 +178,13 @@ grid: {
 tile: {
   width: "29%",
   borderWidth: 1,
-  borderColor: "#999",
+  borderColor: C.border,
   borderRadius: 10,
   paddingVertical: 6,
   paddingLeft: 6,
   paddingRight: 24, // keeps the modifier clear of the save box
   alignItems: "center",
-  backgroundColor: "white",
+  backgroundColor: C.surface,
   overflow: "visible",
 },
 abilityLabel: { fontSize: 14, fontWeight: "700", alignSelf: "flex-start" },
@@ -198,22 +201,22 @@ save: {
   borderWidth: 1.5,
   paddingHorizontal: 6,
   paddingVertical: 4,
-  shadowColor: "#000",
+  shadowColor: C.shadow,
   shadowOpacity: 0.15,
   shadowRadius: 2,
   shadowOffset: { width: 0, height: 1 },
   elevation: 2,
 },
-saveBase: { backgroundColor: "white", borderColor: "#999" },
-saveProf: { backgroundColor: "#1565c0", borderColor: "#0d47a1" },
-saveLabel: { fontSize: 9, fontWeight: "700", color: "#777", letterSpacing: 0.5 },
-saveValue: { fontSize: 15, fontWeight: "700", color: "#222" },
-saveTextProf: { color: "white" },
-  score: { minWidth: 36, alignItems: "center", borderWidth: 1, borderColor: "#999", borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2 },
-  box: { borderWidth: 1, borderColor: "#999", borderRadius: 12, padding: 10 },
+saveBase: { backgroundColor: C.surface, borderColor: C.border },
+saveProf: { backgroundColor: C.accent, borderColor: C.accentDark },
+saveLabel: { fontSize: 9, fontWeight: "700", color: C.muted, letterSpacing: 0.5 },
+saveValue: { fontSize: 15, fontWeight: "700", color: C.text },
+saveTextProf: { color: C.onAccent },
+  score: { minWidth: 36, alignItems: "center", borderWidth: 1, borderColor: C.border, borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2 },
+  box: { borderWidth: 1, borderColor: C.border, borderRadius: 12, padding: 10, backgroundColor: C.surface },
   section: { fontSize: 24, fontWeight: "600" },
-  passiveRow: { flexDirection: "row", alignItems: "center", gap: 10, borderWidth: 1, borderColor: "#999", borderRadius: 10, padding: 8 },
-  passiveValue: { minWidth: 36, alignItems: "center", borderWidth: 1, borderColor: "#999", borderRadius: 6, paddingVertical: 4 },
+  passiveRow: { flexDirection: "row", alignItems: "center", gap: 10, borderWidth: 1, borderColor: C.border, borderRadius: 10, padding: 8 },
+  passiveValue: { minWidth: 36, alignItems: "center", borderWidth: 1, borderColor: C.border, borderRadius: 6, paddingVertical: 4 },
   passiveLabel: { flex: 1, textAlign: "center", fontSize: 16 },
-  noteIcon: { width: 24, height: 24, borderWidth: 1, borderColor: "#999", borderRadius: 6, alignItems: "center", justifyContent: "center" },
+  noteIcon: { width: 24, height: 24, borderWidth: 1, borderColor: C.border, borderRadius: 6, alignItems: "center", justifyContent: "center" },
 });

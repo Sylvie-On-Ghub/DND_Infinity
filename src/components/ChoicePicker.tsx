@@ -1,16 +1,11 @@
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
-import {
-  ActivityIndicator,
-  FlatList,
-  Modal,
-  Pressable,
-  Text,
-  View,
-} from "react-native";
+import { ActivityIndicator, FlatList, Modal, Pressable, View } from "react-native";
+import { Text } from "@/components/Text";
 import { getChoiceOptions, makeSelection } from "@/lib/api/characters";
 import type { PendingChoice } from "@/lib/api/client";
 import { useSheetAction } from "@/lib/api/useSheetAction";
+import { C } from "@/lib/colors";
 
 // The API only reports eligibility. Flip this to let homebrew/DM rulings through.
 const ALLOW_INELIGIBLE = false;
@@ -41,18 +36,18 @@ export function ChoicePicker({
 
   return (
     <Modal visible animationType="slide" onRequestClose={onClose}>
-      <View style={{ flex: 1, padding: 16, paddingTop: 60 }}>
+      <View style={{ flex: 1, padding: 16, paddingTop: 60, backgroundColor: C.bg }}>
         <Text style={{ fontSize: 22, fontWeight: "700" }}>{choice.prompt}</Text>
-        <Text style={{ color: "#777", marginBottom: 8 }}>
+        <Text style={{ color: C.muted, marginBottom: 8 }}>
           Pick {max} · selected {picked.length}
         </Text>
 
         {options.isLoading && <ActivityIndicator style={{ marginTop: 24 }} />}
         {options.error && (
-          <Text style={{ color: "#b71c1c" }}>{options.error.message}</Text>
+          <Text style={{ color: C.danger }}>{options.error.message}</Text>
         )}
         {action.error && (
-          <Text style={{ color: "#b71c1c" }}>{action.error.message}</Text>
+          <Text style={{ color: C.danger }}>{action.error.message}</Text>
         )}
 
         <FlatList
@@ -69,8 +64,8 @@ export function ChoicePicker({
                   paddingVertical: 12,
                   paddingHorizontal: 8,
                   borderBottomWidth: 1,
-                  borderColor: "#eee",
-                  backgroundColor: selected ? "#e8f0fe" : "transparent",
+                  borderColor: C.divider,
+                  backgroundColor: selected ? C.accentSoft : "transparent",
                   opacity: blocked ? 0.4 : 1,
                 }}
               >
@@ -79,7 +74,7 @@ export function ChoicePicker({
                   {item.name ?? item.option_id}
                 </Text>
                 {!item.eligible && !!item.reason && (
-                  <Text style={{ color: "#b71c1c", fontSize: 13 }}>
+                  <Text style={{ color: C.danger, fontSize: 13 }}>
                     {item.reason}
                   </Text>
                 )}
@@ -97,7 +92,7 @@ export function ChoicePicker({
             )
           }
           style={{
-            backgroundColor: "#1565c0",
+            backgroundColor: C.accent,
             opacity: picked.length === 0 || action.isPending ? 0.4 : 1,
             padding: 14,
             borderRadius: 8,
@@ -105,12 +100,12 @@ export function ChoicePicker({
             marginTop: 8,
           }}
         >
-          <Text style={{ color: "white", fontWeight: "700" }}>
+          <Text style={{ color: C.onAccent, fontWeight: "700" }}>
             Confirm ({picked.length}/{max})
           </Text>
         </Pressable>
         <Pressable onPress={onClose} style={{ padding: 16, alignItems: "center" }}>
-          <Text style={{ color: "#1565c0", fontWeight: "600" }}>Cancel</Text>
+          <Text style={{ color: C.accent, fontWeight: "600" }}>Cancel</Text>
         </Pressable>
       </View>
     </Modal>

@@ -1,8 +1,10 @@
 import { useQuery } from "@tanstack/react-query";
-import { Modal, Pressable, Switch, Text, View } from "react-native";
+import { Modal, Pressable, Switch, View } from "react-native";
+import { Text } from "@/components/Text";
 import { getCharacter, getSheet } from "@/lib/api/characters";
 import type { ACOption } from "@/lib/api/client";
 import { useCharacterPatch } from "@/lib/api/useCharacterPatch";
+import { C } from "@/lib/colors";
 
 export function AcModal({
   id,
@@ -36,17 +38,17 @@ export function AcModal({
     <Modal visible={visible} transparent animationType="fade" onRequestClose={close}>
       <Pressable
         onPress={close}
-        style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.45)", paddingTop: 110, paddingHorizontal: 24 }}
+        style={{ flex: 1, backgroundColor: C.backdrop, paddingTop: 110, paddingHorizontal: 24 }}
       >
         <Pressable
           onPress={() => {}}
-          style={{ backgroundColor: "white", borderRadius: 12, padding: 16, gap: 12 }}
+          style={{ backgroundColor: C.surface, borderRadius: 12, padding: 16, gap: 12 }}
         >
           <Text style={{ fontSize: 20, fontWeight: "700" }}>Armour class</Text>
           <Text style={{ fontSize: 28, fontWeight: "700" }}>
             {sheet?.ac ?? "–"}
             {!!detail?.formula && (
-              <Text style={{ fontSize: 14, fontWeight: "400", color: "#555" }}>
+              <Text style={{ fontSize: 14, fontWeight: "400", color: C.textSecondary }}>
                 {"  "}
                 {detail.formula}
                 {detail.bonus ? ` ${detail.bonus > 0 ? "+" : ""}${detail.bonus}` : ""}
@@ -55,7 +57,7 @@ export function AcModal({
           </Text>
 
           {spellOptions.length === 0 ? (
-            <Text style={{ color: "#777" }}>No spells that set your AC.</Text>
+            <Text style={{ color: C.muted }}>No spells that set your AC.</Text>
           ) : (
             spellOptions.map((o) => {
               const on = override === o.id;
@@ -64,27 +66,27 @@ export function AcModal({
                   <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
                     <View style={{ flex: 1 }}>
                       <Text style={{ fontSize: 16, fontWeight: "600" }}>{o.name ?? o.id}</Text>
-                      <Text style={{ color: "#777", fontSize: 12 }}>AC {o.value ?? "–"} while active</Text>
+                      <Text style={{ color: C.muted, fontSize: 12 }}>AC {o.value ?? "–"} while active</Text>
                     </View>
-                    <Switch
+                    <Switch trackColor={{ true: C.accent, false: C.fillStrong }}
                       value={on}
                       disabled={patch.isPending}
                       onValueChange={(v) => toggle(o, v)}
                     />
                   </View>
                   {o.eligible === false && !!o.reason && (
-                    <Text style={{ color: "#e65100", fontSize: 12 }}>{o.reason}</Text>
+                    <Text style={{ color: C.warning, fontSize: 12 }}>{o.reason}</Text>
                   )}
                 </View>
               );
             })
           )}
 
-          <Text style={{ color: "#777", fontSize: 12 }}>
+          <Text style={{ color: C.muted, fontSize: 12 }}>
             {"Turn a spell on while it's active. The sheet can't tell when it ends, so turn it off again yourself."}
           </Text>
 
-          {patch.error && <Text style={{ color: "#b71c1c" }}>{patch.error.message}</Text>}
+          {patch.error && <Text style={{ color: C.danger }}>{patch.error.message}</Text>}
         </Pressable>
       </Pressable>
     </Modal>
