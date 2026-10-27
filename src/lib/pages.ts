@@ -6,6 +6,7 @@ export const PAGES = [
   { slug: "features", label: "Features & Traits" },
   { slug: "spells", label: "Spells" },
   { slug: "inventory", label: "Inventory" },
+  { slug: "characteristics", label: "Characteristics" },
   { slug: "edit", label: "Edit Character" },
 ];
   // later: { slug: "skills", label: "Skills" }, { slug: "spells", label: "Spells" } …
