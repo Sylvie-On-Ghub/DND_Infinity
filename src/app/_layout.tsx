@@ -15,10 +15,7 @@ export default function RootLayout() {
         <StatusBar style="light" />
         <Stack screenOptions={{ contentStyle: { backgroundColor: C.bg } }}>
           <Stack.Screen name="index" options={{ headerShown: false }} />
-          <Stack.Screen
-            name="character/[id]"
-            options={{ headerShown: false }}
-          />
+          <Stack.Screen name="character/[id]" options={{ headerShown: false }} />
         </Stack>
       </QueryClientProvider>
     </GestureHandlerRootView>
