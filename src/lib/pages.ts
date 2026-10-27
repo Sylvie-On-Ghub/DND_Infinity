@@ -1,6 +1,6 @@
 export const PAGES = [
-  { slug: "", label: "Overview" },
-  { slug: "abilities", label: "Abilities, Saves & Senses" },
+  { slug: "", label: "Abilities, Saves & Senses" },
+  { slug: "defenses", label: "Speed & Defenses" },
   { slug: "skills", label: "Skills & Proficiencies" },
   { slug: "actions", label: "Actions" },
   { slug: "features", label: "Features & Traits" },

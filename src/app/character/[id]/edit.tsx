@@ -4,6 +4,7 @@ import { useState } from "react";
 import { ActivityIndicator, FlatList, Modal, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 import { getCharacter, getContent, getSheet, levelUp, listContent, patchCharacter, setHp } from "@/lib/api/characters";
 import { ChoiceEditor } from "@/components/ChoiceEditor";
+import { LevelUpModal } from "@/components/LevelUpModal";
 import { Page } from "@/components/Page";
 import type { Character, Sheet } from "@/lib/api/client";
 import { useCharacterPatch } from "@/lib/api/useCharacterPatch";
@@ -46,6 +47,14 @@ export default function EditPage() {
 
   return (
     <Page>
+      {!!sheet.warnings?.length && (
+        <View style={{ backgroundColor: "#fff8e1", padding: 12, borderRadius: 8 }}>
+          <Text style={{ fontWeight: "700", marginBottom: 4 }}>Warnings</Text>
+          {sheet.warnings.map((w) => (
+            <Text key={w.key}>• {w.message}</Text>
+          ))}
+        </View>
+      )}
       <IdentitySection id={id} character={character} />
         <LevelSection
             key={JSON.stringify(character.classes)}
@@ -234,10 +243,14 @@ function IdentityRow({ label, value, onPress }: { label: string; value: string; 
 function LevelSection({ id, character, sheet }: { id: string; character: Character; sheet: Sheet }) {
   const queryClient = useQueryClient();
   const classes = character.classes ?? [];
-  const [levels, setLevels] = useState<number[]>(classes.map((c) => c.level ?? 1));
+  // Drafts as text so a level can be typed in; parsed and checked before applying.
+  const [drafts, setDrafts] = useState<string[]>(classes.map((c) => String(c.level ?? 1)));
+  const levels = drafts.map((d) => parseInt(d, 10));
+  const valid = levels.every((n) => Number.isInteger(n) && n >= 1 && n <= 20);
   const [method, setMethod] = useState<"average" | "max" | "roll">("average");
+  const [levelUpOpen, setLevelUpOpen] = useState(false);
 
-  const diffs = classes.map((c, i) => levels[i] - (c.level ?? 1));
+  const diffs = classes.map((c, i) => (valid ? levels[i] - (c.level ?? 1) : 0));
   const anyUp = diffs.some((d) => d > 0);
   const anyDown = diffs.some((d) => d < 0);
   const changed = anyUp || anyDown;
@@ -268,8 +281,9 @@ function LevelSection({ id, character, sheet }: { id: string; character: Charact
     },
   });
 
+  const setDraft = (i: number, v: string) => setDrafts((p) => p.map((x, j) => (j === i ? v : x)));
   const step = (i: number, d: number) =>
-    setLevels((p) => p.map((v, j) => (j === i ? Math.max(1, Math.min(20, v + d)) : v)));
+    setDraft(i, String(Math.max(1, Math.min(20, (parseInt(drafts[i], 10) || 1) + d))));
 
   const summary = classes
     .map((c, i) => (diffs[i] ? `${pretty(c.class_id)} ${c.level} → ${levels[i]}` : null))
@@ -281,8 +295,12 @@ function LevelSection({ id, character, sheet }: { id: string; character: Charact
       <Text style={s.section}>Level</Text>
       <View style={s.box}>
         <Text style={s.muted}>
-          Total level {sheet.level ?? "–"}. To add a new class, use Level up on the Overview page.
+          Type a level or use − and +, then apply. Total level {sheet.level ?? "–"} · proficiency {sheet.proficiency_bonus !== undefined ? `+${sheet.proficiency_bonus}` : "–"}.
+          To add a level in a new class, use Level up.
         </Text>
+        <View style={{ marginTop: 6 }}>
+          <Btn label="Level up" onPress={() => setLevelUpOpen(true)} />
+        </View>
 
         {classes.length === 0 && <Text style={s.muted}>No class yet</Text>}
 
@@ -297,9 +315,14 @@ function LevelSection({ id, character, sheet }: { id: string; character: Charact
             <Pressable style={s.step} onPress={() => step(i, -1)}>
               <Text style={s.stepText}>−</Text>
             </Pressable>
-            <Text style={{ width: 36, textAlign: "center", fontSize: 18, fontWeight: "700" }}>
-              {levels[i]}
-            </Text>
+            <TextInput
+              value={drafts[i]}
+              onChangeText={(v) => setDraft(i, v.replace(/[^0-9]/g, ""))}
+              keyboardType="number-pad"
+              maxLength={2}
+              selectTextOnFocus
+              style={[s.input, { width: 56, minWidth: 0, fontSize: 18, fontWeight: "700" }]}
+            />
             <Pressable style={s.step} onPress={() => step(i, 1)}>
               <Text style={s.stepText}>+</Text>
             </Pressable>
@@ -330,6 +353,8 @@ function LevelSection({ id, character, sheet }: { id: string; character: Charact
           </View>
         )}
 
+        {!valid && <Text style={[s.muted, { marginTop: 8, color: "#b71c1c" }]}>Levels must be 1 to 20.</Text>}
+
         {anyDown && (
           <Text style={[s.muted, { marginTop: 8, color: "#e65100" }]}>
             Lowering a level drops that level's HP entry. Choices made at the removed levels
@@ -341,12 +366,13 @@ function LevelSection({ id, character, sheet }: { id: string; character: Charact
           {changed && <Text style={s.sub}>{summary}</Text>}
           <Btn
             label={apply.isPending ? "Applying…" : "Apply level changes"}
-            disabled={!changed || apply.isPending}
+            disabled={!changed || !valid || apply.isPending}
             onPress={() => apply.mutate()}
           />
           {apply.error && <Text style={s.err}>{apply.error.message}</Text>}
         </View>
       </View>
+      <LevelUpModal id={id} visible={levelUpOpen} onClose={() => setLevelUpOpen(false)} />
     </View>
   );
 }
