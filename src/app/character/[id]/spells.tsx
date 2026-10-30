@@ -6,7 +6,8 @@ import { ActivityIndicator, Pressable, StyleSheet, Switch, View } from "react-na
 import { ScrollView } from "react-native-gesture-handler";
 import { Text, TextInput } from "@/components/Text";
 import { Page } from "@/components/Page";
-import { getSheet, restoreSlot, spendSlot } from "@/lib/api/characters";
+import { SpellChooser } from "@/components/SpellChooser";
+import { getCharacter, getSheet, restoreSlot, spendSlot } from "@/lib/api/characters";
 import type { Sheet, SpellEffectView, SpellSourceView, SpellView } from "@/lib/api/client";
 import { useSheetAction } from "@/lib/api/useSheetAction";
 import { damageText, levelLabel, pretty, shortRange, shortTime, signed } from "@/lib/format";
@@ -18,11 +19,13 @@ export default function SpellsPage() {
   const [level, setLevel] = useState<number | "all">("all");
   const [search, setSearch] = useState("");
   const [upcast, setUpcast] = useState(false);
+  const [choosing, setChoosing] = useState<SpellSourceView | null>(null);
 
   const { data: sheet, error, isLoading } = useQuery({
     queryKey: ["sheet", id],
     queryFn: () => getSheet(id),
   });
+  const character = useQuery({ queryKey: ["character", id], queryFn: () => getCharacter(id) }).data;
 
   if (isLoading) return <ActivityIndicator style={{ flex: 1 }} />;
   if (error || !sheet) {
@@ -131,6 +134,35 @@ export default function SpellsPage() {
         </View>
       )}
 
+      {/* Choosing spells: one button per class that casts */}
+      {classSources.length > 0 && (
+        <View style={{ gap: 8 }}>
+          {classSources.map((src) => {
+            // The sheet lists unfilled spell picks as pending choices on "spells:<source>".
+            const left = (sheet.pending_choices ?? [])
+              .filter((p) => p.feature_id === `spells:${src.id}`)
+              .reduce((n, p) => n + (p.remaining ?? 0), 0);
+            return (
+              <Pressable
+                key={src.id}
+                disabled={!character}
+                onPress={() => setChoosing(src)}
+                style={[s.chooseBtn, !character && { opacity: 0.4 }]}
+              >
+                <Text style={{ color: C.onAccent, fontWeight: "700" }}>
+                  {classSources.length > 1 ? `Choose ${src.name ?? pretty(src.id)} spells` : "Choose spells"}
+                </Text>
+                {left > 0 && (
+                  <View style={s.badge}>
+                    <Text style={{ color: C.accent, fontSize: 12, fontWeight: "800" }}>{left} to pick</Text>
+                  </View>
+                )}
+              </Pressable>
+            );
+          })}
+        </View>
+      )}
+
       <Slots id={id} sheet={sheet} />
 
       {/* Spell list */}
@@ -164,6 +196,16 @@ export default function SpellsPage() {
         ))}
         {groups.length === 0 && <Text style={s.muted}>No spells match.</Text>}
       </View>
+
+      {choosing && character && (
+        <SpellChooser
+          id={id}
+          source={choosing}
+          character={character}
+          sheet={sheet}
+          onClose={() => setChoosing(null)}
+        />
+      )}
     </Page>
   );
 }
@@ -362,4 +404,6 @@ const s = StyleSheet.create({
   pipRow: { flexDirection: "row", alignItems: "center", gap: 8, paddingVertical: 4 },
   pip: { width: 26, height: 26, borderRadius: 13, borderWidth: 2, borderColor: C.accent, backgroundColor: C.surface },
   pipFull: { backgroundColor: C.accent },
+  chooseBtn: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 10, backgroundColor: C.accent, paddingVertical: 12, borderRadius: 10 },
+  badge: { backgroundColor: C.onAccent, borderRadius: 10, paddingHorizontal: 8, paddingVertical: 2 },
 });

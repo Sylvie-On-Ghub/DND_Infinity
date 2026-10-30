@@ -6,7 +6,6 @@ import { Text } from "@/components/Text";
 import { Page } from "@/components/Page";
 import { getSheet } from "@/lib/api/characters";
 import type { AttackView, SheetAction, SpellSourceView, SpellView } from "@/lib/api/client";
-import { COMBAT_ACTIONS, STANDARD_REACTIONS } from "@/lib/combatActions";
 import { damageText, pretty, signed } from "@/lib/format";
 import { C } from "@/lib/colors";
 
@@ -67,12 +66,6 @@ export default function ActionsPage() {
         {attacks.length === 0 && <Text style={s.muted}>None</Text>}
       </Section>
 
-      <Section title="Combat actions" subtitle="Available to everyone. Tap for the rule.">
-        {COMBAT_ACTIONS.map((c) => (
-          <Item key={c.name} title={c.name} lines={[c.text]} />
-        ))}
-      </Section>
-
       <Section title="Class / Race / Feat actions">
         <ActionList list={ofType("action")} spells={spellsOfType("action")} />
       </Section>
@@ -81,11 +74,8 @@ export default function ActionsPage() {
         <ActionList list={ofType("bonus_action")} spells={spellsOfType("bonus_action")} />
       </Section>
 
-      <Section title="Reactions" subtitle="Available to everyone: Opportunity Attack">
-        {STANDARD_REACTIONS.map((c) => (
-          <Item key={c.name} title={c.name} lines={[c.text]} />
-        ))}
-        <ActionList list={ofType("reaction")} spells={spellsOfType("reaction")} hideEmpty />
+      <Section title="Reactions">
+        <ActionList list={ofType("reaction")} spells={spellsOfType("reaction")} />
       </Section>
 
       {(other.length > 0 || otherSpells.length > 0) && (
@@ -148,13 +138,11 @@ function AttackRow({ a }: { a: AttackView }) {
 function ActionList({
   list,
   spells = [],
-  hideEmpty,
 }: {
   list: SheetAction[];
   spells?: SourcedSpell[];
-  hideEmpty?: boolean;
 }) {
-  if (list.length === 0 && spells.length === 0) return hideEmpty ? null : <Text style={s.muted}>None</Text>;
+  if (list.length === 0 && spells.length === 0) return <Text style={s.muted}>None</Text>;
   return (
     <>
       {list.map((a, i) => {
