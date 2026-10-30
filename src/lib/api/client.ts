@@ -1,8 +1,24 @@
+import Constants from "expo-constants";
 import createClient from "openapi-fetch";
+import { Platform } from "react-native";
 import type { components, paths } from "./schema";
 
+/**
+ * The backend runs on the same machine as the dev server, so reuse whatever
+ * host the app was loaded from (LAN IP, Tailscale IP, MagicDNS name...).
+ * Set EXPO_PUBLIC_API_URL to override.
+ */
+function resolveBaseUrl(): string {
+  if (process.env.EXPO_PUBLIC_API_URL) return process.env.EXPO_PUBLIC_API_URL;
+  const port = process.env.EXPO_PUBLIC_API_PORT ?? "8080";
+  const host =
+    Platform.OS === "web"
+      ? globalThis.location?.hostname
+      : Constants.expoConfig?.hostUri?.split(":")[0];
+  return `http://${host || "localhost"}:${port}`;
+}
 
-const baseUrl = process.env.EXPO_PUBLIC_API_URL ?? "http://localhost:8080";
+const baseUrl = resolveBaseUrl();
 
 export const api = createClient<paths>({ baseUrl });
 
