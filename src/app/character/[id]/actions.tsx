@@ -2,10 +2,20 @@ import { useQuery } from "@tanstack/react-query";
 import { useLocalSearchParams } from "expo-router";
 import { useState, type ReactNode } from "react";
 import { ActivityIndicator, Pressable, StyleSheet, View } from "react-native";
+import { CastModal, sourceResource } from "@/components/CastModal";
 import { Text } from "@/components/Text";
 import { Page } from "@/components/Page";
-import { getSheet } from "@/lib/api/characters";
-import type { AttackView, SheetAction, SpellSourceView, SpellView } from "@/lib/api/client";
+import { UsesCounter } from "@/components/UsesCounter";
+import { getSheet, restoreResource, spendResource } from "@/lib/api/characters";
+import type {
+  AttackView,
+  ResourceView,
+  Sheet,
+  SheetAction,
+  SpellSourceView,
+  SpellView,
+} from "@/lib/api/client";
+import { useSheetAction } from "@/lib/api/useSheetAction";
 import { damageText, pretty, signed } from "@/lib/format";
 import { C } from "@/lib/colors";
 
@@ -50,6 +60,9 @@ export default function ActionsPage() {
     );
   const spellsOfType = (t: string) => featureSpells.filter((x) => spellType(x.spell.casting_time) === t);
   const otherSpells = spellsOfType("other");
+  const list = (acts: SheetAction[], spells: SourcedSpell[]) => (
+    <ActionList id={id} sheet={sheet} list={acts} spells={spells} />
+  );
 
   return (
     <Page>
@@ -67,20 +80,20 @@ export default function ActionsPage() {
       </Section>
 
       <Section title="Class / Race / Feat actions">
-        <ActionList list={ofType("action")} spells={spellsOfType("action")} />
+        {list(ofType("action"), spellsOfType("action"))}
       </Section>
 
       <Section title="Bonus actions">
-        <ActionList list={ofType("bonus_action")} spells={spellsOfType("bonus_action")} />
+        {list(ofType("bonus_action"), spellsOfType("bonus_action"))}
       </Section>
 
       <Section title="Reactions">
-        <ActionList list={ofType("reaction")} spells={spellsOfType("reaction")} />
+        {list(ofType("reaction"), spellsOfType("reaction"))}
       </Section>
 
       {(other.length > 0 || otherSpells.length > 0) && (
         <Section title="Free & other">
-          <ActionList list={other} spells={otherSpells} />
+          {list(other, otherSpells)}
         </Section>
       )}
     </Page>
@@ -136,12 +149,19 @@ function AttackRow({ a }: { a: AttackView }) {
 /* ---------- Actions ---------- */
 
 function ActionList({
+  id,
+  sheet,
   list,
-  spells = [],
+  spells,
 }: {
+  id: string;
+  sheet: Sheet;
   list: SheetAction[];
-  spells?: SourcedSpell[];
+  spells: SourcedSpell[];
 }) {
+  const [casting, setCasting] = useState<SourcedSpell | null>(null);
+  // An action's resource_id matches the resource's feature_id.
+  const resOf = (key?: string) => (sheet.resources ?? []).find((r) => r.feature_id === key);
   if (list.length === 0 && spells.length === 0) return <Text style={s.muted}>None</Text>;
   return (
     <>
@@ -155,18 +175,55 @@ function ActionList({
               }`.trim()
             : "",
         ].filter(Boolean);
-        return <Item key={`${a.name}-${i}`} title={a.name ?? "Unnamed"} meta={a.duration} lines={lines} />;
+        return (
+          <Item
+            key={`${a.name}-${i}`}
+            id={id}
+            title={a.name ?? "Unnamed"}
+            meta={a.duration}
+            lines={lines}
+            res={a.resource_id ? resOf(a.resource_id) : undefined}
+          />
+        );
       })}
       {spells.map(({ spell, src }) => (
-        <SpellItem key={`${src.id}:${spell.id}`} sp={spell} src={src} />
+        <SpellItem
+          key={`${src.id}:${spell.id}`}
+          id={id}
+          sp={spell}
+          src={src}
+          res={sourceResource(sheet, src)}
+          onCast={() => setCasting({ spell, src })}
+        />
       ))}
+      {casting && (
+        <CastModal
+          id={id}
+          sheet={sheet}
+          sp={casting.spell}
+          src={casting.src}
+          onClose={() => setCasting(null)}
+        />
+      )}
     </>
   );
 }
 
 /* ---------- Spells ---------- */
 
-function SpellItem({ sp, src }: { sp: SpellView; src: SpellSourceView }) {
+function SpellItem({
+  id,
+  sp,
+  src,
+  res,
+  onCast,
+}: {
+  id: string;
+  sp: SpellView;
+  src: SpellSourceView;
+  res?: ResourceView;
+  onCast: () => void;
+}) {
   const source = [
     `From ${src.name ?? pretty(src.id)}`,
     src.save_dc !== undefined ? `Save DC ${src.save_dc}` : "",
@@ -177,6 +234,11 @@ function SpellItem({ sp, src }: { sp: SpellView; src: SpellSourceView }) {
 
   return (
     <Item
+      id={id}
+      res={res}
+      // Levelled spells can also go on a slot, so they open the cast picker.
+      onUse={(sp.level ?? 0) > 0 ? onCast : undefined}
+      useLabel="Cast"
       title={sp.name ?? pretty(sp.id)}
       meta={[sp.level === 0 ? "Cantrip" : `Lv ${sp.level}`, sp.casting_time].filter(Boolean).join(" · ")}
       lines={[
@@ -212,16 +274,65 @@ function Section({ title, subtitle, children }: { title: string; subtitle?: stri
   );
 }
 
-function Item({ title, meta, lines }: { title: string; meta?: string; lines: string[] }) {
+function Item({
+  id,
+  title,
+  meta,
+  lines,
+  res,
+  onUse,
+  useLabel = "Use",
+}: {
+  id: string;
+  title: string;
+  meta?: string;
+  lines: string[];
+  res?: ResourceView;
+  // Replaces spending the resource directly (the spell cast picker).
+  onUse?: () => void;
+  useLabel?: string;
+}) {
   const [open, setOpen] = useState(false);
+  const action = useSheetAction(id);
+  const max = res?.max ?? 0;
+  const remaining = res ? res.remaining ?? Math.max(0, max - (res.used ?? 0)) : 0;
+  const spend = () => res?.feature_id && action.mutate(() => spendResource(id, res.feature_id!));
+  const restore = () => res?.feature_id && action.mutate(() => restoreResource(id, res.feature_id!));
+  const showUse = !!onUse || (!!res && max > 0);
+  const useDisabled = action.isPending || (!onUse && remaining <= 0);
+
   return (
     <Pressable onPress={() => setOpen((o) => !o)} style={s.item}>
       <View style={s.itemHead}>
         <Text style={s.itemName}>{title}</Text>
         {!!meta && <Text style={s.meta}>{meta}</Text>}
+        {res && max > 0 && (
+          <Text style={[s.uses, remaining === 0 && { color: C.muted }]}>
+            {remaining}/{max}
+          </Text>
+        )}
+        {showUse && (
+          <Pressable
+            onPress={onUse ?? spend}
+            disabled={useDisabled}
+            hitSlop={4}
+            style={[s.useBtn, useDisabled && { opacity: 0.4 }]}
+          >
+            <Text style={s.useText}>{useLabel}</Text>
+          </Pressable>
+        )}
         <Text style={s.caret}>{open ? "▴" : "▾"}</Text>
       </View>
       {open && lines.map((l, i) => <Text key={i} style={s.body}>{l}</Text>)}
+      {open && res && max > 0 && (
+        <UsesCounter
+          res={res}
+          busy={action.isPending}
+          onSpend={() => spend()}
+          onRestore={() => restore()}
+        />
+      )}
+      {action.error && <Text style={{ color: C.danger, fontSize: 13 }}>{action.error.message}</Text>}
     </Pressable>
   );
 }
@@ -240,6 +351,9 @@ const s = StyleSheet.create({
   itemHead: { flexDirection: "row", alignItems: "center", gap: 8 },
   itemName: { flex: 1, fontSize: 16, fontWeight: "600" },
   meta: { fontSize: 12, color: C.textSecondary },
+  uses: { fontSize: 13, fontWeight: "700", color: C.accent },
+  useBtn: { paddingHorizontal: 12, paddingVertical: 5, borderRadius: 8, backgroundColor: C.accent },
+  useText: { color: C.onAccent, fontSize: 12, fontWeight: "700" },
   caret: { fontSize: 14, color: C.muted },
   body: { fontSize: 14, color: C.text },
 });

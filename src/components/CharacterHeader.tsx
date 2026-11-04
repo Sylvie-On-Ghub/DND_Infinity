@@ -7,6 +7,7 @@ import { Text } from "@/components/Text";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { getCharacter, getSheet, listContent } from "@/lib/api/characters";
 import { AcModal } from "./AcModal";
+import { ConditionsModal } from "./ConditionsModal";
 import { HpModal } from "./HpModal";
 import { InspirationModal } from "./InspirationModal";
 import { PortraitModal } from "./PortraitModal";
@@ -25,6 +26,7 @@ export function CharacterHeader({ id }: { id: string }) {
   const [acOpen, setAcOpen] = useState(false);
   const [portraitOpen, setPortraitOpen] = useState(false);
   const [inspirationOpen, setInspirationOpen] = useState(false);
+  const [conditionsOpen, setConditionsOpen] = useState(false);
   const [brokenPortrait, setBrokenPortrait] = useState<string>();
 
   // Same query keys as the screens below, so the cache is shared.
@@ -45,6 +47,11 @@ export function CharacterHeader({ id }: { id: string }) {
   const temp = character?.temp_hp ?? 0;
   const pct = max > 0 ? Math.min(current / max, 1) : 0;
   const conditions = character?.conditions ?? [];
+  const exhaustion = character?.exhaustion ?? 0;
+  const conditionText = [
+    ...conditions.map(pretty),
+    exhaustion > 0 ? `Exhaustion ${exhaustion}` : "",
+  ].filter(Boolean);
   const inspiration = character?.inspiration ?? 0;
   const portrait = character?.portrait_url;
 
@@ -97,8 +104,9 @@ export function CharacterHeader({ id }: { id: string }) {
 
             <Box
               label="Conditions"
-              value={conditions.length ? conditions.join(", ") : "None"}
+              value={conditionText.length ? conditionText.join(", ") : "None"}
               grow
+              onPress={character ? () => setConditionsOpen(true) : undefined}
             />
           </View>
 
@@ -133,6 +141,14 @@ export function CharacterHeader({ id }: { id: string }) {
         onClose={() => setInspirationOpen(false)}
         current={inspiration}
       />
+      {conditionsOpen && (
+        <ConditionsModal
+          id={id}
+          onClose={() => setConditionsOpen(false)}
+          conditions={conditions}
+          exhaustion={exhaustion}
+        />
+      )}
       {/* Mounted only while open, so the input starts from the saved link each time. */}
       {portraitOpen && (
         <PortraitModal

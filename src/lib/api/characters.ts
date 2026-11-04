@@ -196,6 +196,17 @@ export const restoreResource = async (id: string, featureId: string) =>
     })
   );
 
+export const changeConditions = async (
+  id: string,
+  body: { add?: string[]; remove?: string[]; exhaustion?: number }
+) =>
+  unwrap(
+    await api.POST("/api/characters/{id}/conditions", {
+      params: { path: { id } },
+      body,
+    })
+  );
+
 export const getRuleset = async () => unwrap(await api.GET("/api/ruleset"));
 
 // The item definition is an untyped object in the spec, so type just what we read.
