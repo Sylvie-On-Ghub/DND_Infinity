@@ -6,6 +6,7 @@ import { ActivityIndicator, Pressable, StyleSheet, Switch, View } from "react-na
 import { ScrollView } from "react-native-gesture-handler";
 import { Text, TextInput } from "@/components/Text";
 import { Page } from "@/components/Page";
+import { CastModal } from "@/components/CastModal";
 import { SpellChooser } from "@/components/SpellChooser";
 import { getCharacter, getSheet, restoreSlot, spendSlot } from "@/lib/api/characters";
 import type { Sheet, SpellEffectView, SpellSourceView, SpellView } from "@/lib/api/client";
@@ -20,6 +21,7 @@ export default function SpellsPage() {
   const [search, setSearch] = useState("");
   const [upcast, setUpcast] = useState(false);
   const [choosing, setChoosing] = useState<SpellSourceView | null>(null);
+  const [casting, setCasting] = useState<{ sp: SpellView; src: SpellSourceView } | null>(null);
 
   const { data: sheet, error, isLoading } = useQuery({
     queryKey: ["sheet", id],
@@ -178,6 +180,7 @@ export default function SpellsPage() {
           <Text style={[s.head, { flex: 1.2 }]}>Range</Text>
           <Text style={[s.head, { flex: 1.1 }]}>Hit/DC</Text>
           <Text style={[s.head, { flex: 1.7 }]}>Effect</Text>
+          <View style={{ width: s.castBtn.minWidth }} />
         </View>
 
         {groups.map((g) => (
@@ -190,6 +193,7 @@ export default function SpellsPage() {
                 src={src}
                 upcast={upcast}
                 showSource={showSource}
+                onCast={() => setCasting({ sp, src })}
               />
             ))}
           </View>
@@ -204,6 +208,16 @@ export default function SpellsPage() {
           character={character}
           sheet={sheet}
           onClose={() => setChoosing(null)}
+        />
+      )}
+
+      {casting && (
+        <CastModal
+          id={id}
+          sheet={sheet}
+          sp={casting.sp}
+          src={casting.src}
+          onClose={() => setCasting(null)}
         />
       )}
     </Page>
@@ -223,11 +237,13 @@ function SpellRow({
   src,
   upcast,
   showSource,
+  onCast,
 }: {
   sp: SpellView;
   src: SpellSourceView;
   upcast: boolean;
   showSource: boolean;
+  onCast: () => void;
 }) {
   const [open, setOpen] = useState(false);
   const effects = sp.effects ?? [];
@@ -271,6 +287,14 @@ function SpellRow({
         <Text style={[s.cell, { flex: 1.7 }]}>
           {effects.length ? effects.map(effectText).join(" · ") : "–"}
         </Text>
+        {/* Cantrips are cast at will, so only levelled spells get a button. */}
+        {(sp.level ?? 0) > 0 ? (
+          <Pressable onPress={onCast} hitSlop={4} style={s.castBtn}>
+            <Text style={{ color: C.onAccent, fontSize: 12, fontWeight: "700" }}>Cast</Text>
+          </Pressable>
+        ) : (
+          <View style={{ width: s.castBtn.minWidth }} />
+        )}
       </View>
 
       {upcast &&
@@ -405,5 +429,6 @@ const s = StyleSheet.create({
   pip: { width: 26, height: 26, borderRadius: 13, borderWidth: 2, borderColor: C.accent, backgroundColor: C.surface },
   pipFull: { backgroundColor: C.accent },
   chooseBtn: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 10, backgroundColor: C.accent, paddingVertical: 12, borderRadius: 10 },
+  castBtn: { minWidth: 44, marginLeft: 4, paddingVertical: 5, borderRadius: 8, backgroundColor: C.accent, alignItems: "center" },
   badge: { backgroundColor: C.onAccent, borderRadius: 10, paddingHorizontal: 8, paddingVertical: 2 },
 });
