@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { router } from "expo-router";
 import { useState } from "react";
 import { ActivityIndicator, FlatList, Pressable, View } from "react-native";
+import { Portrait } from "@/components/Portrait";
 import { Text, TextInput } from "@/components/Text";
 import { signOut } from "@/lib/api/auth";
 import { createCharacter, listCharacters } from "@/lib/api/characters";
@@ -86,13 +87,16 @@ export default function Index() {
             onPress={() =>
               router.push({ pathname: "/character/[id]", params: { id: item.id! } })
             }
-            style={{ paddingVertical: 12 }}
+            style={{ flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 8 }}
           >
-            <Text style={{ fontSize: 18, fontWeight: "600" }}>{item.name}</Text>
-            <Text style={{ color: C.muted }}>
-              Level {item.level ?? 0}
-              {item.class_ids?.length ? ` · ${item.class_ids.join(", ")}` : ""}
-            </Text>
+            <Portrait uri={item.portrait_url} name={item.name} size={56} />
+            <View style={{ flex: 1 }}>
+              <Text style={{ fontSize: 18, fontWeight: "600" }}>{item.name}</Text>
+              <Text style={{ color: C.muted }}>
+                Level {item.level ?? 0}
+                {item.class_ids?.length ? ` · ${item.class_ids.join(", ")}` : ""}
+              </Text>
+            </View>
           </Pressable>
         )}
       />
