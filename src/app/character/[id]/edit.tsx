@@ -59,20 +59,22 @@ export default function EditPage() {
       )}
       <IdentitySection id={id} character={character} />
         <LevelSection
-            key={JSON.stringify(character.classes)}
+            key={`level:${JSON.stringify(character.classes)}`}
             id={id}
             character={character}
             sheet={sheet}
         />
       <SubclassSection id={id} character={character} />
       <HpSection
-        key={JSON.stringify(character.classes) + character.current_hp}
+        key={`hp:${JSON.stringify(character.classes)}:${character.current_hp}`}
         id={id}
         character={character}
         sheet={sheet}
       />
       <AbilitySection
-        key={JSON.stringify(character.abilities)}
+        // Prefixed because a new character's classes and abilities are both null, and sibling keys
+        // have to differ.
+        key={`abilities:${JSON.stringify(character.abilities)}`}
         id={id}
         character={character}
         sheet={sheet}
