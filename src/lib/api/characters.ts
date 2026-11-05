@@ -1,4 +1,5 @@
-import { api, unwrap } from "./client";
+import { api, ApiRequestError, unwrap } from "./client";
+import { forgetVersion, getVersion } from "./versions";
 import type { AddItemRequest, Character, CoinsAction, EntryPatch } from "./client";
 
 export const listCharacters = async () =>
@@ -111,13 +112,28 @@ export const setTempHp = async (id: string, amount: number) =>
     })
   );
 
-export const patchCharacter = async (id: string, body: Character) =>
-  unwrap(
-    await api.PATCH("/api/characters/{id}", {
-      params: { path: { id } },
-      body,
-    })
-  );
+// Callers build the body from what they last read, and a whole array can be in it, so a 409 is
+// never retried here: that could overwrite the change that caused it.
+export const patchCharacter = async (id: string, body: Character) => {
+  const version = getVersion(id) ?? (await getCharacter(id)).version;
+  try {
+    return unwrap(
+      await api.PATCH("/api/characters/{id}", {
+        params: { path: { id } },
+        body: { ...body, version },
+      })
+    );
+  } catch (e) {
+    if (e instanceof ApiRequestError && e.status === 409) {
+      forgetVersion(id);
+      throw new ApiRequestError(
+        "This character just changed, so your edit wasn't saved. It's been refreshed: check it and try again.",
+        409
+      );
+    }
+    throw e;
+  }
+};
 
 // A merge-patch body for the portrait. null clears it, which the generated
 // Character type can't express, hence the cast.
@@ -246,11 +262,12 @@ export const removeEntry = async (id: string, entryId: string, deleteContents = 
     })
   );
 
-export const moveEntry = async (id: string, entryId: string, container: string) =>
+// With a quantity smaller than the stack, only that many move, as a new entry.
+export const moveEntry = async (id: string, entryId: string, container: string, quantity?: number) =>
   unwrap(
     await api.POST("/api/characters/{id}/inventory/{entryId}/move", {
       params: { path: { id, entryId } },
-      body: { container },
+      body: { container, quantity },
     })
   );
 

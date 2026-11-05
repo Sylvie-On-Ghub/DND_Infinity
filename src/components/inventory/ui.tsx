@@ -62,11 +62,12 @@ export function Btn({
   );
 }
 
-export function Chip({ label, active, onPress }: { label: string; active: boolean; onPress: () => void }) {
+export function Chip({ label, active, disabled, onPress }: { label: string; active: boolean; disabled?: boolean; onPress: () => void }) {
   return (
     <Pressable
       onPress={onPress}
-      style={{ paddingHorizontal: 12, paddingVertical: 6, borderRadius: 16, backgroundColor: active ? C.accent : C.fill }}
+      disabled={disabled}
+      style={{ paddingHorizontal: 12, paddingVertical: 6, borderRadius: 16, backgroundColor: active ? C.accent : C.fill, opacity: disabled ? 0.5 : 1 }}
     >
       <Text style={{ color: active ? C.surface : C.text, fontWeight: "600" }}>{label}</Text>
     </Pressable>

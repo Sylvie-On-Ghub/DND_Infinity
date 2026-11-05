@@ -2,7 +2,9 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { router } from "expo-router";
 import { useState } from "react";
 import { ActivityIndicator, FlatList, Pressable, View } from "react-native";
+import { Portrait } from "@/components/Portrait";
 import { Text, TextInput } from "@/components/Text";
+import { signOut } from "@/lib/api/auth";
 import { createCharacter, listCharacters } from "@/lib/api/characters";
 import { C } from "@/lib/colors";
 
@@ -27,7 +29,12 @@ export default function Index() {
 
   return (
     <View style={{ flex: 1, padding: 16, paddingTop: 60 }}>
-      <Text style={{ fontSize: 28, fontWeight: "700" }}>Characters</Text>
+      <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+        <Text style={{ fontSize: 28, fontWeight: "700" }}>Characters</Text>
+        <Pressable onPress={signOut} hitSlop={8}>
+          <Text style={{ color: C.accent }}>Sign out</Text>
+        </Pressable>
+      </View>
 
       <View style={{ flexDirection: "row", gap: 8, marginVertical: 12 }}>
         <TextInput
@@ -80,13 +87,16 @@ export default function Index() {
             onPress={() =>
               router.push({ pathname: "/character/[id]", params: { id: item.id! } })
             }
-            style={{ paddingVertical: 12 }}
+            style={{ flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 8 }}
           >
-            <Text style={{ fontSize: 18, fontWeight: "600" }}>{item.name}</Text>
-            <Text style={{ color: C.muted }}>
-              Level {item.level ?? 0}
-              {item.class_ids?.length ? ` · ${item.class_ids.join(", ")}` : ""}
-            </Text>
+            <Portrait uri={item.portrait_url} name={item.name} size={56} />
+            <View style={{ flex: 1 }}>
+              <Text style={{ fontSize: 18, fontWeight: "600" }}>{item.name}</Text>
+              <Text style={{ color: C.muted }}>
+                Level {item.level ?? 0}
+                {item.class_ids?.length ? ` · ${item.class_ids.join(", ")}` : ""}
+              </Text>
+            </View>
           </Pressable>
         )}
       />

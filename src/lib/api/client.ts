@@ -1,7 +1,9 @@
 import Constants from "expo-constants";
 import createClient from "openapi-fetch";
 import { Platform } from "react-native";
+import { endSession, getToken } from "@/lib/auth/session";
 import type { components, paths } from "./schema";
+import { noteVersion } from "./versions";
 
 /**
  * The backend runs on the same machine as the dev server, so reuse whatever
@@ -21,6 +23,32 @@ function resolveBaseUrl(): string {
 const baseUrl = resolveBaseUrl();
 
 export const api = createClient<paths>({ baseUrl });
+
+api.use({
+  onRequest({ request }) {
+    const token = getToken();
+    if (token) request.headers.set("Authorization", `Bearer ${token}`);
+    return request;
+  },
+  // Only the current token being refused ends the session. A wrong login code is also a 401, but
+  // is sent without one, and a slow reply for an old token shouldn't undo a newer sign-in.
+  async onResponse({ request, response }) {
+    if (
+      response.status === 401 &&
+      request.headers.get("Authorization") === `Bearer ${getToken()}`
+    ) {
+      endSession();
+    }
+
+    // A character and a sheet have `version` at the top; an action's reply has it on its sheet.
+    const id = request.url.match(/\/api\/characters\/([^/?]+)/)?.[1];
+    if (id && response.ok && response.status !== 204) {
+      const body = await response.clone().json();
+      const version = body.version ?? body.sheet?.version;
+      if (typeof version === "number") noteVersion(id, version);
+    }
+  },
+});
 
 // Handy aliases so screens don't import from `components` directly.
 export type Character = components["schemas"]["Character"];
@@ -47,6 +75,16 @@ export type ACOption = components["schemas"]["ACOption"];
 export type ResourceView = components["schemas"]["ResourceView"];
 export type FeatureView = NonNullable<Sheet["features"]>[number];
 
+export class ApiRequestError extends Error {
+  constructor(
+    message: string,
+    readonly status: number,
+    readonly retryAfter?: number // seconds, from the Retry-After header of a 429
+  ) {
+    super(message);
+  }
+}
+
 /**
  * openapi-fetch returns { data, error } instead of throwing.
  * This unwraps it so TanStack Query can handle failures normally.
@@ -58,8 +96,11 @@ export function unwrap<T>(result: {
 }): T {
   if (result.error !== undefined || result.data === undefined) {
     const err = result.error as ApiError | undefined;
-    throw new Error(
-      err?.error?.message ?? `HTTP ${result.response.status}`
+    const retryAfter = Number(result.response.headers.get("Retry-After"));
+    throw new ApiRequestError(
+      err?.error?.message ?? `HTTP ${result.response.status}`,
+      result.response.status,
+      retryAfter > 0 ? retryAfter : undefined
     );
   }
   return result.data;

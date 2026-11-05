@@ -1,6 +1,6 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { patchCharacter } from "./characters";
-import type { Character } from "./client";
+import { ApiRequestError, type Character } from "./client";
 
 export function useCharacterPatch(id: string) {
   const queryClient = useQueryClient();
@@ -11,6 +11,12 @@ export function useCharacterPatch(id: string) {
       // the response has no sheet, so refetch it (AC, max HP, modifiers…)
       queryClient.invalidateQueries({ queryKey: ["sheet", id] });
       queryClient.invalidateQueries({ queryKey: ["characters"] });
+    },
+    onError: (e) => {
+      if (e instanceof ApiRequestError && e.status === 409) {
+        queryClient.invalidateQueries({ queryKey: ["character", id] });
+        queryClient.invalidateQueries({ queryKey: ["sheet", id] });
+      }
     },
   });
 }

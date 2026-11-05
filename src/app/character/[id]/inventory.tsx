@@ -182,6 +182,7 @@ export default function InventoryPage() {
               ? { bonded: selected.entry_id === bondedId, previous: bonded }
               : undefined
           }
+          onSplit={setOpenEntry}
           onClose={() => setOpenEntry(null)}
         />
       )}

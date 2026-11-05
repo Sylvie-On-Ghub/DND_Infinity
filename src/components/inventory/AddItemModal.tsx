@@ -6,6 +6,8 @@ import { addItem, listContent } from "@/lib/api/characters";
 import type { AddItemRequest } from "@/lib/api/client";
 import { useSheetAction } from "@/lib/api/useSheetAction";
 import { pretty } from "@/lib/format";
+import { takesTags } from "@/lib/itemTags";
+import { TagEditor } from "./TagEditor";
 import { Btn, Chip, ModalShell, ui } from "./ui";
 import { C } from "@/lib/colors";
 
@@ -28,6 +30,7 @@ export function AddItemModal({
   const [name, setName] = useState("");
   const [weight, setWeight] = useState("");
   const [cost, setCost] = useState("");
+  const [tags, setTags] = useState<string[]>([]);
 
   const items = useQuery({
     queryKey: ["content", "items"],
@@ -38,6 +41,7 @@ export function AddItemModal({
   const shown = (items.data ?? [])
     .filter((x) => (x.name ?? x.id ?? "").toLowerCase().includes(q))
     .slice(0, 100);
+  const canTag = takesTags(items.data?.find((x) => x.id === picked)?.kind);
 
   const n = parseInt(qty, 10);
   const validQty = Number.isInteger(n) && n > 0;
@@ -46,7 +50,7 @@ export function AddItemModal({
   const add = () => {
     const body: AddItemRequest =
       tab === "catalogue"
-        ? { item_id: picked!, quantity: n, container: container || undefined }
+        ? { item_id: picked!, quantity: n, container: container || undefined, tags: canTag && tags.length ? tags : undefined }
         : {
             custom: {
               name: name.trim(),
@@ -94,6 +98,7 @@ export function AddItemModal({
               </Pressable>
             )}
           />
+          {canTag && <TagEditor tags={tags} onChange={setTags} />}
         </>
       ) : (
         <View style={{ gap: 10 }}>

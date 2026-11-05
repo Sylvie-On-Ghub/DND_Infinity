@@ -1,5 +1,4 @@
 import { useQuery } from "@tanstack/react-query";
-import { Image } from "expo-image";
 import { router } from "expo-router";
 import { useState } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
@@ -10,6 +9,7 @@ import { AcModal } from "./AcModal";
 import { ConditionsModal } from "./ConditionsModal";
 import { HpModal } from "./HpModal";
 import { InspirationModal } from "./InspirationModal";
+import { Portrait } from "./Portrait";
 import { PortraitModal } from "./PortraitModal";
 import { RestModal } from "./RestModal";
 import { C } from "@/lib/colors";
@@ -27,7 +27,6 @@ export function CharacterHeader({ id }: { id: string }) {
   const [portraitOpen, setPortraitOpen] = useState(false);
   const [inspirationOpen, setInspirationOpen] = useState(false);
   const [conditionsOpen, setConditionsOpen] = useState(false);
-  const [brokenPortrait, setBrokenPortrait] = useState<string>();
 
   // Same query keys as the screens below, so the cache is shared.
   const sheet = useQuery({ queryKey: ["sheet", id], queryFn: () => getSheet(id) }).data;
@@ -68,20 +67,8 @@ export function CharacterHeader({ id }: { id: string }) {
       </View>
 
       <View style={styles.body}>
-        <Pressable style={styles.icon} onPress={() => setPortraitOpen(true)} disabled={!character}>
-          {portrait && portrait !== brokenPortrait ? (
-            <Image
-              source={{ uri: portrait }}
-              contentFit="cover"
-              transition={150}
-              onError={() => setBrokenPortrait(portrait)}
-              style={StyleSheet.absoluteFill}
-            />
-          ) : (
-            <Text style={styles.iconText}>
-              {character?.name?.[0]?.toUpperCase() ?? "?"}
-            </Text>
-          )}
+        <Pressable onPress={() => setPortraitOpen(true)} disabled={!character}>
+          <Portrait uri={portrait} name={character?.name} size={72} />
         </Pressable>
 
         <View style={styles.col}>
@@ -190,8 +177,6 @@ const styles = StyleSheet.create({
   name: { fontSize: 20, fontWeight: "700" },
   sub: { fontSize: 14, color: C.textSecondary, flexShrink: 1 },
   body: { flexDirection: "row", gap: 8 },
-  icon: { width: 72, height: 72, borderRadius: 16, backgroundColor: C.fillStrong, alignItems: "center", justifyContent: "center", overflow: "hidden" },
-  iconText: { fontSize: 32, fontWeight: "700", color: C.textSecondary },
   col: { flex: 1, gap: 6 },
   row: { flexDirection: "row", gap: 6 },
   box: { borderWidth: 1, borderColor: C.border, borderRadius: 8, paddingHorizontal: 8, paddingVertical: 4, justifyContent: "center", backgroundColor: C.surface, minHeight: 33 },
