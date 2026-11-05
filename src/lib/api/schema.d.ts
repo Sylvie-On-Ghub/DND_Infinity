@@ -229,7 +229,7 @@ export interface paths {
         put?: never;
         /**
          * Add an item
-         * @description Send either `item_id` (from /api/content/items) or an inline `custom` item for one-off loot. Quantity defaults to 1. A plain item merges into an existing stack of the same item in the same container unless `new_stack` is true. Returns the entry's id in `entry_id`.
+         * @description Send either `item_id` (from /api/content/items) or an inline `custom` item for one-off loot. Quantity defaults to 1. Weapons, armour and shields can also take `tags`, such as `silvered` or `+1`. A plain item merges into an existing stack of the same item with the same tags in the same container unless `new_stack` is true. Returns the entry's id in `entry_id`.
          */
         post: operations["addItem"];
         delete?: never;
@@ -257,7 +257,7 @@ export interface paths {
         head?: never;
         /**
          * Change an entry's state
-         * @description Equip, attune, stash, move into a container, or add notes. Only the fields below can be patched. Equipping two suits of armour is allowed and shows as a warning. On a custom entry, `custom` is a merge patch onto its inline item: send only the item fields that change (`null` clears one). Sending `custom` for a library item is a 400.
+         * @description Equip, attune, stash, move into a container, add notes, or set tags. Only the fields below can be patched. `tags` replaces the entry's whole list and applies to the whole stack; to tag one of several, split it off first with the move action. Equipping two suits of armour is allowed and shows as a warning. On a custom entry, `custom` is a merge patch onto its inline item: send only the item fields that change (`null` clears one). Sending `custom` for a library item is a 400.
          */
         patch: operations["patchEntry"];
         trace?: never;
@@ -650,6 +650,8 @@ export interface components {
             new_stack?: boolean;
             notes?: string;
             quantity?: number;
+            /** @description Weapons, armour and shields: variations such as silvered or +1. See InventoryItem.tags. */
+            tags?: string[];
         };
         AttackDetails: {
             /** @enum {string} */
@@ -894,6 +896,8 @@ export interface components {
             notes?: string;
             proficient?: boolean;
             stashed?: boolean;
+            /** @description Replaces the entry's tags. See InventoryItem.tags. */
+            tags?: string[];
         };
         ErrorDetail: {
             code?: string;
@@ -992,6 +996,8 @@ export interface components {
             proficient?: boolean;
             quantity?: number;
             stashed?: boolean;
+            /** @description Weapons, armour and shields: variations of the item. +X adds X to hit and damage on a weapon and X to AC on armour or a shield; silvered adds its rules to a weapon's description; other words are labels. Lowercase; at most one +X. */
+            tags?: string[];
         };
         InventoryView: {
             attuned?: boolean;
@@ -1016,6 +1022,8 @@ export interface components {
             rarity?: string;
             requires_attunement?: boolean;
             stashed?: boolean;
+            /** @description The entry's tags. name and the numbers elsewhere on the sheet already include them. */
+            tags?: string[];
             unknown?: boolean;
             weight?: number;
         };

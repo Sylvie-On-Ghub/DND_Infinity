@@ -5,7 +5,9 @@ import { changeQuantity, moveEntry, patchEntry, removeEntry } from "@/lib/api/ch
 import type { EntryPatch, InventoryView } from "@/lib/api/client";
 import { useSheetAction } from "@/lib/api/useSheetAction";
 import { pretty } from "@/lib/format";
+import { bonusEffect, bonusOf, takesTags } from "@/lib/itemTags";
 import { bondExisting, endBond, isConjured } from "@/lib/pactWeapon";
+import { TagEditor } from "./TagEditor";
 import { Btn, ModalShell, ui } from "./ui";
 import { C } from "@/lib/colors";
 
@@ -16,6 +18,7 @@ export function ItemModal({
   isContainer,
   hasContents,
   pact,
+  onSplit,
   onClose,
 }: {
   id: string;
@@ -25,12 +28,16 @@ export function ItemModal({
   hasContents: boolean;
   // Set when the character has Pact of the Blade and this entry is a weapon.
   pact?: { bonded: boolean; previous?: InventoryView };
+  // Called with the new entry's id when one is split off this stack.
+  onSplit: (entryId: string) => void;
   onClose: () => void;
 }) {
   const action = useSheetAction(id);
+  // Separate so its error shows by the tag buttons, not off-screen at the bottom of the modal.
+  const tagAction = useSheetAction(id);
   const [notes, setNotes] = useState(entry.notes ?? "");
   const eid = entry.entry_id!;
-  const busy = action.isPending;
+  const busy = action.isPending || tagAction.isPending;
 
   const patch = (body: EntryPatch) => action.mutate(() => patchEntry(id, eid, body));
   const remove = (deleteContents: boolean) =>
@@ -43,6 +50,8 @@ export function ItemModal({
       .map((c) => ({ id: c.entry_id!, label: c.name ?? "Container" })),
   ];
   const here = entry.container ?? "";
+  const quantity = entry.quantity ?? 1;
+  const bonus = bonusOf(entry.tags ?? []);
 
   return (
     <ModalShell title={entry.name ?? "Item"} onClose={onClose}>
@@ -70,6 +79,41 @@ export function ItemModal({
         <Toggle label="Attuned" value={!!entry.attuned} disabled={busy} onChange={(v) => patch({ attuned: v })} />
       )}
       <Toggle label="Stashed (not carried)" value={!!entry.stashed} disabled={busy} onChange={(v) => patch({ stashed: v })} />
+
+      {/* Tags */}
+      {takesTags(entry.kind) && (
+        <View style={{ gap: 6 }}>
+          <Text style={ui.label}>Tags</Text>
+          <TagEditor
+            tags={entry.tags ?? []}
+            disabled={busy}
+            onChange={(tags) => tagAction.mutate(() => patchEntry(id, eid, { tags }))}
+          />
+          {tagAction.error && <Text style={ui.err}>{tagAction.error.message}</Text>}
+          {bonus > 0 && (
+            <Text style={ui.muted}>
+              {bonusEffect(entry.kind, bonus)}
+              {entry.requires_attunement && !entry.attuned ? " once attuned" : ""}
+            </Text>
+          )}
+          {quantity > 1 && (
+            <>
+              <Text style={ui.muted}>Tags apply to all {quantity} in this stack.</Text>
+              <Btn
+                label="Split off 1 to tag separately"
+                disabled={busy}
+                onPress={() =>
+                  tagAction.mutate(() => moveEntry(id, eid, here, 1), {
+                    onSuccess: (res) => {
+                      if (res.entry_id) onSplit(res.entry_id);
+                    },
+                  })
+                }
+              />
+            </>
+          )}
+        </View>
+      )}
 
       {/* Pact weapon */}
       {pact && (

@@ -262,11 +262,12 @@ export const removeEntry = async (id: string, entryId: string, deleteContents = 
     })
   );
 
-export const moveEntry = async (id: string, entryId: string, container: string) =>
+// With a quantity smaller than the stack, only that many move, as a new entry.
+export const moveEntry = async (id: string, entryId: string, container: string, quantity?: number) =>
   unwrap(
     await api.POST("/api/characters/{id}/inventory/{entryId}/move", {
       params: { path: { id, entryId } },
-      body: { container },
+      body: { container, quantity },
     })
   );
 
