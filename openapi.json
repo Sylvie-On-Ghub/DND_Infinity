@@ -536,6 +536,10 @@
             },
             "type": "object"
           },
+          "version": {
+            "description": "Goes up by one with every change, including play actions. PUT and PATCH must send the latest one you have.",
+            "type": "integer"
+          },
           "weapon_profs": {
             "items": {
               "type": "string"
@@ -552,10 +556,6 @@
               "type": "string"
             },
             "type": "array"
-          },
-          "error": {
-            "description": "Set when the stored data couldn't be read.",
-            "type": "string"
           },
           "id": {
             "type": "string"
@@ -1136,6 +1136,20 @@
         },
         "type": "object"
       },
+      "GrantedSpells": {
+        "properties": {
+          "min_level": {
+            "type": "integer"
+          },
+          "spell_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          }
+        },
+        "type": "object"
+      },
       "Grants": {
         "properties": {
           "armour_profs": {
@@ -1473,6 +1487,25 @@
         },
         "type": "object"
       },
+      "LoginCodeRequest": {
+        "properties": {
+          "username": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "LoginCodeVerifyRequest": {
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "username": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
       "Modifier": {
         "properties": {
           "allow_stack": {
@@ -1519,6 +1552,14 @@
           },
           "quantity": {
             "type": "integer"
+          }
+        },
+        "type": "object"
+      },
+      "OTPRequested": {
+        "properties": {
+          "message": {
+            "type": "string"
           }
         },
         "type": "object"
@@ -1578,6 +1619,12 @@
               "type": "string"
             },
             "type": "array"
+          },
+          "level": {
+            "type": "integer"
+          },
+          "spell_list": {
+            "type": "string"
           },
           "tag": {
             "type": "string"
@@ -1804,6 +1851,18 @@
         },
         "type": "object"
       },
+      "SessionResponse": {
+        "properties": {
+          "expires_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "token": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
       "Sheet": {
         "description": "Everything the rules engine computes for a character. Never stored; recomputed on every request.",
         "properties": {
@@ -1966,6 +2025,10 @@
               "$ref": "#/components/schemas/ToolView"
             },
             "type": "object"
+          },
+          "version": {
+            "description": "The character's version at the time of this sheet. Use it for the next PUT or PATCH.",
+            "type": "integer"
           },
           "vulnerabilities": {
             "items": {
@@ -2375,6 +2438,9 @@
             },
             "type": "array"
           },
+          "granted": {
+            "type": "boolean"
+          },
           "higher_levels": {
             "type": "string"
           },
@@ -2479,6 +2545,12 @@
             },
             "type": "array"
           },
+          "granted_spells": {
+            "items": {
+              "$ref": "#/components/schemas/GrantedSpells"
+            },
+            "type": "array"
+          },
           "id": {
             "type": "string"
           },
@@ -2568,6 +2640,21 @@
         },
         "type": "object"
       },
+      "User": {
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "discord_username": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
       "WalletView": {
         "properties": {
           "coins": {
@@ -2621,6 +2708,9 @@
           "attack": {
             "$ref": "#/components/schemas/AttackDetails"
           },
+          "base_weapon": {
+            "type": "string"
+          },
           "category": {
             "type": "string"
           },
@@ -2633,18 +2723,176 @@
         },
         "type": "object"
       }
+    },
+    "securitySchemes": {
+      "bearerAuth": {
+        "description": "The token from `POST /api/auth/otp/verify`.",
+        "scheme": "bearer",
+        "type": "http"
+      }
     }
   },
   "info": {
-    "description": "A rules engine and storage service for D\u0026D-style characters, built to be driven by any frontend.\n\n## The core ideas\n\n- **Character vs sheet.** You store a *character*: the choices made and the things that change in play. The server computes the *sheet* from it (AC, bonuses, attacks, spell DCs, carrying weight). You never calculate rules yourself; fetch the sheet.\n- **Everything is permissive.** Rules problems (a skill outside the allowed list, spending a slot you don't have, a prerequisite not met) are never errors. The request succeeds and the sheet carries a `warnings` entry. Show warnings, and let the user acknowledge ones that are intentional (homebrew, DM rulings).\n- **Pending choices drive wizards.** `sheet.pending_choices` lists every choice the character is entitled to but hasn't made (starting skills, a subclass, an ability score improvement, spells to pick). For each, ask `choice-options` for what's allowed, then record the pick with `selections`.\n- **Feats and ability score improvements.** At a feat level the character makes one choice: a feat. Ability Score Improvement is one of the feats, and taking it opens a second pending choice for the two points. That second choice's `feature_id` looks like `ability_score_improvement@rogue_asi_4:feat`, which names the pick it belongs to, so a feat taken twice has two separate sets of points. Always use a `feature_id` exactly as `pending_choices` gives it.\n- **Backgrounds and races.** Both are features marked with a tag (`background`, `race`), chosen by setting `background_id` or `race_id` on the character with a PATCH. List the choices at `/api/content/backgrounds` and `/api/content/races`. A background's own picks, such as its ability score increase and any feat it grants, appear in `pending_choices`. So does choosing a race or a background at all (`feature_id` `character`, `choice_id` `race` or `background`) when the loaded content offers any. Ability score increases come from the background; a race does not change ability scores.\n- **Actions return the sheet.** Every play action responds with the updated sheet, so the screen can redraw without a second request.\n- **Content comes from packs.** Class, item, spell and feature ids come from `/api/content`. Homebrew packs layer over the core one, so the id lists can differ between servers.\n- **Strict bodies.** Unknown fields in a request body are a 400, so a typo can't silently drop data.\n\n## Building a character\n\n1. `POST /api/characters` with a name and ability scores.\n2. `POST /api/characters/{id}/level-up` once per level.\n3. `GET /api/characters/{id}/sheet` and read `pending_choices`.\n4. For each pending choice, `GET .../choice-options` then `POST .../selections`.\n5. Pick spells by patching `spellbooks` on the character, for example `{\"spellbooks\": {\"class:wizard\": {\"cantrips\": [\"fire_bolt\"]}}}`.\n6. Add gear with `POST .../inventory` and money with `POST .../coins`.\n7. `POST .../rest` with `long` to start at full health.\n\n## Errors\n\nEvery error has the shape `{\"error\": {\"code\": \"...\", \"message\": \"...\"}}` with codes `bad_request`, `invalid_id`, `not_found`, `already_exists`, `bad_conversion`, `method_not_allowed`, `not_supported` and `internal`.\n\n## Notes\n\n- There is no authentication; it is meant to run locally or on a trusted network.\n- Browsers on another origin need the server started with `-cors-origin`.\n- Actions on one character are serialised, so concurrent play actions don't overwrite each other. `PUT` and `PATCH` are last-write-wins.",
+    "description": "A rules engine and storage service for D\u0026D-style characters, built to be driven by any frontend.\n\n## The core ideas\n\n- **Character vs sheet.** You store a *character*: the choices made and the things that change in play. The server computes the *sheet* from it (AC, bonuses, attacks, spell DCs, carrying weight). You never calculate rules yourself; fetch the sheet.\n- **Everything is permissive.** Rules problems (a skill outside the allowed list, spending a slot you don't have, a prerequisite not met) are never errors. The request succeeds and the sheet carries a `warnings` entry. Show warnings, and let the user acknowledge ones that are intentional (homebrew, DM rulings).\n- **Pending choices drive wizards.** `sheet.pending_choices` lists every choice the character is entitled to but hasn't made (starting skills, a subclass, an ability score improvement, spells to pick). For each, ask `choice-options` for what's allowed, then record the pick with `selections`.\n- **Feats and ability score improvements.** At a feat level the character makes one choice: a feat. Ability Score Improvement is one of the feats, and taking it opens a second pending choice for the two points. That second choice's `feature_id` looks like `ability_score_improvement@rogue_asi_4:feat`, which names the pick it belongs to, so a feat taken twice has two separate sets of points. Always use a `feature_id` exactly as `pending_choices` gives it.\n- **Backgrounds and races.** Both are features marked with a tag (`background`, `race`), chosen by setting `background_id` or `race_id` on the character with a PATCH. List the choices at `/api/content/backgrounds` and `/api/content/races`. A background's own picks, such as its ability score increase and any feat it grants, appear in `pending_choices`. So does choosing a race or a background at all (`feature_id` `character`, `choice_id` `race` or `background`) when the loaded content offers any. Ability score increases come from the background; a race does not change ability scores.\n- **Actions return the sheet.** Every play action responds with the updated sheet, so the screen can redraw without a second request.\n- **Content comes from packs.** Class, item, spell and feature ids come from `/api/content`. Homebrew packs layer over the core one, so the id lists can differ between servers.\n- **Strict bodies.** Unknown fields in a request body are a 400, so a typo can't silently drop data.\n\n## Signing in\n\nAccounts are approved by the server's administrator; there is no sign-up.\n\n1. `POST /api/auth/otp/request` with a Discord username. The user gets a code by DM.\n2. `POST /api/auth/otp/verify` with the username and code, and keep the `token` it returns.\n3. Send `Authorization: Bearer \u003ctoken\u003e` on every request that needs it. Sessions last 30 days and extend as they are used.\n4. A 401 on a request means the session is over: go back to step 1.\n\nYour characters are visible only to you. Character ids are per user, and someone else's character looks exactly like one that doesn't exist.\n\n## Versions\n\nEvery character has a `version`, which goes up with every change. It is on the character and on every sheet, including the sheet an action returns.\n\n- `PUT` and `PATCH` must send the latest `version` you have. If the character has changed since, they fail with 409 `version_conflict` and nothing is saved: fetch it again, reapply the change and retry.\n- Play actions, such as damage or spending a slot, don't send a version, because they apply a change relative to the current state. They still move the version on.\n\n## Building a character\n\n1. `POST /api/characters` with a name and ability scores.\n2. `POST /api/characters/{id}/level-up` once per level.\n3. `GET /api/characters/{id}/sheet` and read `pending_choices`.\n4. For each pending choice, `GET .../choice-options` then `POST .../selections`.\n5. Pick spells by patching `spellbooks` on the character, for example `{\"spellbooks\": {\"class:wizard\": {\"cantrips\": [\"fire_bolt\"]}}}`.\n6. Add gear with `POST .../inventory` and money with `POST .../coins`.\n7. `POST .../rest` with `long` to start at full health.\n\n## Errors\n\nEvery error has the shape `{\"error\": {\"code\": \"...\", \"message\": \"...\"}}` with codes `bad_request`, `invalid_id`, `unauthorized`, `not_found`, `already_exists`, `version_conflict`, `bad_conversion`, `rate_limited`, `method_not_allowed`, `not_supported` and `internal`.\n\n## Notes\n\n- Browsers on another origin need that origin listed in the server's `DND_CORS_ORIGINS`.\n- Actions on one character are serialised, so concurrent play actions don't overwrite each other.",
     "title": "DnD Character API",
-    "version": "0.1.0"
+    "version": "0.2.0"
   },
   "openapi": "3.0.3",
   "paths": {
+    "/api/auth/logout": {
+      "post": {
+        "description": "Ends the session this token belongs to. Other devices stay signed in.",
+        "operationId": "logout",
+        "responses": {
+          "204": {
+            "description": "Signed out."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Sign in required: the bearer token is missing, unknown or expired."
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "summary": "Sign out",
+        "tags": [
+          "Account"
+        ]
+      }
+    },
+    "/api/auth/otp/request": {
+      "post": {
+        "description": "Sends a 6-digit code by Discord DM, valid for 10 minutes, if the username is approved. The response is the same whether or not it is, and whether or not the DM could be sent. Asking again replaces any earlier code. Limited to 1 request a minute and 5 an hour per username, plus a limit per client address.",
+        "operationId": "requestLoginCode",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "example": {
+                "username": "mira"
+              },
+              "schema": {
+                "$ref": "#/components/schemas/LoginCodeRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OTPRequested"
+                }
+              }
+            },
+            "description": "Accepted."
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Bad request: malformed JSON, an unknown field, an invalid id, or a request that can't be carried out. Rules problems are never errors; they come back as warnings on the sheet."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too many attempts. The `Retry-After` header says how many seconds to wait."
+          }
+        },
+        "summary": "Ask for a login code",
+        "tags": [
+          "Account"
+        ]
+      }
+    },
+    "/api/auth/otp/verify": {
+      "post": {
+        "description": "Exchanges a code for a session token, which is only ever returned here. A code works once, and stops working after 5 failed attempts. An unknown username, a wrong code and an expired code all get the same 401.",
+        "operationId": "verifyLoginCode",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "example": {
+                "username": "mira",
+                "code": "123456"
+              },
+              "schema": {
+                "$ref": "#/components/schemas/LoginCodeVerifyRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SessionResponse"
+                }
+              }
+            },
+            "description": "Signed in."
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Bad request: malformed JSON, an unknown field, an invalid id, or a request that can't be carried out. Rules problems are never errors; they come back as warnings on the sheet."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Sign in required: the bearer token is missing, unknown or expired."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too many attempts. The `Retry-After` header says how many seconds to wait."
+          }
+        },
+        "summary": "Sign in with a login code",
+        "tags": [
+          "Account"
+        ]
+      }
+    },
     "/api/characters": {
       "get": {
-        "description": "Id, name, level and classes for every saved character, sorted by name. A character whose file can't be read is included with `error` set.",
+        "description": "Id, name, level and classes for every saved character, sorted by name.",
         "operationId": "listCharacters",
         "responses": {
           "200": {
@@ -2659,8 +2907,23 @@
               }
             },
             "description": "The characters."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Sign in required: the bearer token is missing, unknown or expired."
           }
         },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
         "summary": "List characters",
         "tags": [
           "Characters"
@@ -2718,6 +2981,16 @@
             },
             "description": "Bad request: malformed JSON, an unknown field, an invalid id, or a request that can't be carried out. Rules problems are never errors; they come back as warnings on the sheet."
           },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Sign in required: the bearer token is missing, unknown or expired."
+          },
           "409": {
             "content": {
               "application/json": {
@@ -2726,9 +2999,14 @@
                 }
               }
             },
-            "description": "A character with that id already exists."
+            "description": "`already_exists`: you already have a character with that id. `version_conflict`: the character has changed since you read it, so fetch it again and retry."
           }
         },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
         "summary": "Create a character",
         "tags": [
           "Characters"
@@ -2763,6 +3041,16 @@
             },
             "description": "Bad request: malformed JSON, an unknown field, an invalid id, or a request that can't be carried out. Rules problems are never errors; they come back as warnings on the sheet."
           },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Sign in required: the bearer token is missing, unknown or expired."
+          },
           "404": {
             "content": {
               "application/json": {
@@ -2774,6 +3062,11 @@
             "description": "Not found: no such character, inventory entry, feature or content."
           }
         },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
         "summary": "Delete a character",
         "tags": [
           "Characters"
@@ -2814,6 +3107,16 @@
             },
             "description": "Bad request: malformed JSON, an unknown field, an invalid id, or a request that can't be carried out. Rules problems are never errors; they come back as warnings on the sheet."
           },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Sign in required: the bearer token is missing, unknown or expired."
+          },
           "404": {
             "content": {
               "application/json": {
@@ -2825,13 +3128,18 @@
             "description": "Not found: no such character, inventory entry, feature or content."
           }
         },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
         "summary": "Get a character",
         "tags": [
           "Characters"
         ]
       },
       "patch": {
-        "description": "JSON merge patch (RFC 7386): send only what changes. Objects merge, arrays replace whole, and `null` clears a field. The result must still be a valid character, so a misspelt field is a 400. A character's id can't be changed.",
+        "description": "JSON merge patch (RFC 7386): send only what changes. Objects merge, arrays replace whole, and `null` clears a field. The result must still be a valid character, so a misspelt field is a 400. A character's id can't be changed. `version` is required: send the one you read, and if the character has changed since then the request fails with a 409 and nothing is saved.",
         "operationId": "patchCharacter",
         "parameters": [
           {
@@ -2848,6 +3156,7 @@
           "content": {
             "application/json": {
               "example": {
+                "version": 3,
                 "inspiration": 2,
                 "spellbooks": {
                   "class:wizard": {
@@ -2873,7 +3182,7 @@
                 }
               }
             },
-            "description": "The patched character."
+            "description": "The patched character, with its new version."
           },
           "400": {
             "content": {
@@ -2885,6 +3194,16 @@
             },
             "description": "Bad request: malformed JSON, an unknown field, an invalid id, or a request that can't be carried out. Rules problems are never errors; they come back as warnings on the sheet."
           },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Sign in required: the bearer token is missing, unknown or expired."
+          },
           "404": {
             "content": {
               "application/json": {
@@ -2894,15 +3213,30 @@
               }
             },
             "description": "Not found: no such character, inventory entry, feature or content."
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "`already_exists`: you already have a character with that id. `version_conflict`: the character has changed since you read it, so fetch it again and retry."
           }
         },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
         "summary": "Edit some fields of a character",
         "tags": [
           "Characters"
         ]
       },
       "put": {
-        "description": "Replaces the whole character. The character must already exist, and the body's `id` (if given) must match the URL.",
+        "description": "Replaces the whole character. The character must already exist, and the body's `id` (if given) must match the URL. `version` is required: send the one you read, and if the character has changed since then the request fails with a 409 and nothing is saved.",
         "operationId": "replaceCharacter",
         "parameters": [
           {
@@ -2934,7 +3268,7 @@
                 }
               }
             },
-            "description": "The saved character."
+            "description": "The saved character, with its new version."
           },
           "400": {
             "content": {
@@ -2946,6 +3280,16 @@
             },
             "description": "Bad request: malformed JSON, an unknown field, an invalid id, or a request that can't be carried out. Rules problems are never errors; they come back as warnings on the sheet."
           },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Sign in required: the bearer token is missing, unknown or expired."
+          },
           "404": {
             "content": {
               "application/json": {
@@ -2955,8 +3299,23 @@
               }
             },
             "description": "Not found: no such character, inventory entry, feature or content."
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "`already_exists`: you already have a character with that id. `version_conflict`: the character has changed since you read it, so fetch it again and retry."
           }
         },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
         "summary": "Replace a character",
         "tags": [
           "Characters"
@@ -3007,6 +3366,16 @@
             },
             "description": "Bad request: malformed JSON, an unknown field, an invalid id, or a request that can't be carried out. Rules problems are never errors; they come back as warnings on the sheet."
           },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Sign in required: the bearer token is missing, unknown or expired."
+          },
           "404": {
             "content": {
               "application/json": {
@@ -3018,6 +3387,11 @@
             "description": "Not found: no such character, inventory entry, feature or content."
           }
         },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
         "summary": "Remove an acknowledgement",
         "tags": [
           "Choices"
@@ -3072,6 +3446,16 @@
             },
             "description": "Bad request: malformed JSON, an unknown field, an invalid id, or a request that can't be carried out. Rules problems are never errors; they come back as warnings on the sheet."
           },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Sign in required: the bearer token is missing, unknown or expired."
+          },
           "404": {
             "content": {
               "application/json": {
@@ -3083,6 +3467,11 @@
             "description": "Not found: no such character, inventory entry, feature or content."
           }
         },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
         "summary": "Acknowledge a warning",
         "tags": [
           "Choices"
@@ -3146,6 +3535,16 @@
             },
             "description": "Bad request: malformed JSON, an unknown field, an invalid id, or a request that can't be carried out. Rules problems are never errors; they come back as warnings on the sheet."
           },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Sign in required: the bearer token is missing, unknown or expired."
+          },
           "404": {
             "content": {
               "application/json": {
@@ -3157,6 +3556,11 @@
             "description": "Not found: no such character, inventory entry, feature or content."
           }
         },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
         "summary": "List the options for a choice",
         "tags": [
           "Choices"
@@ -3214,6 +3618,16 @@
             },
             "description": "Bad request: malformed JSON, an unknown field, an invalid id, or a request that can't be carried out. Rules problems are never errors; they come back as warnings on the sheet."
           },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Sign in required: the bearer token is missing, unknown or expired."
+          },
           "404": {
             "content": {
               "application/json": {
@@ -3225,6 +3639,11 @@
             "description": "Not found: no such character, inventory entry, feature or content."
           }
         },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
         "summary": "Gain, spend, pay or convert coins",
         "tags": [
           "Coins"
@@ -3286,6 +3705,16 @@
             },
             "description": "Bad request: malformed JSON, an unknown field, an invalid id, or a request that can't be carried out. Rules problems are never errors; they come back as warnings on the sheet."
           },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Sign in required: the bearer token is missing, unknown or expired."
+          },
           "404": {
             "content": {
               "application/json": {
@@ -3297,6 +3726,11 @@
             "description": "Not found: no such character, inventory entry, feature or content."
           }
         },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
         "summary": "Add or remove conditions",
         "tags": [
           "Play actions"
@@ -3352,6 +3786,16 @@
             },
             "description": "Bad request: malformed JSON, an unknown field, an invalid id, or a request that can't be carried out. Rules problems are never errors; they come back as warnings on the sheet."
           },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Sign in required: the bearer token is missing, unknown or expired."
+          },
           "404": {
             "content": {
               "application/json": {
@@ -3363,6 +3807,11 @@
             "description": "Not found: no such character, inventory entry, feature or content."
           }
         },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
         "summary": "Damage, heal or set hit points",
         "tags": [
           "Play actions"
@@ -3419,6 +3868,16 @@
             },
             "description": "Bad request: malformed JSON, an unknown field, an invalid id, or a request that can't be carried out. Rules problems are never errors; they come back as warnings on the sheet."
           },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Sign in required: the bearer token is missing, unknown or expired."
+          },
           "404": {
             "content": {
               "application/json": {
@@ -3430,6 +3889,11 @@
             "description": "Not found: no such character, inventory entry, feature or content."
           }
         },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
         "summary": "Add an item",
         "tags": [
           "Inventory"
@@ -3490,6 +3954,16 @@
             },
             "description": "Bad request: malformed JSON, an unknown field, an invalid id, or a request that can't be carried out. Rules problems are never errors; they come back as warnings on the sheet."
           },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Sign in required: the bearer token is missing, unknown or expired."
+          },
           "404": {
             "content": {
               "application/json": {
@@ -3501,6 +3975,11 @@
             "description": "Not found: no such character, inventory entry, feature or content."
           }
         },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
         "summary": "Remove an entry",
         "tags": [
           "Inventory"
@@ -3567,6 +4046,16 @@
             },
             "description": "Bad request: malformed JSON, an unknown field, an invalid id, or a request that can't be carried out. Rules problems are never errors; they come back as warnings on the sheet."
           },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Sign in required: the bearer token is missing, unknown or expired."
+          },
           "404": {
             "content": {
               "application/json": {
@@ -3578,6 +4067,11 @@
             "description": "Not found: no such character, inventory entry, feature or content."
           }
         },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
         "summary": "Change an entry's state",
         "tags": [
           "Inventory"
@@ -3643,6 +4137,16 @@
             },
             "description": "Bad request: malformed JSON, an unknown field, an invalid id, or a request that can't be carried out. Rules problems are never errors; they come back as warnings on the sheet."
           },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Sign in required: the bearer token is missing, unknown or expired."
+          },
           "404": {
             "content": {
               "application/json": {
@@ -3654,6 +4158,11 @@
             "description": "Not found: no such character, inventory entry, feature or content."
           }
         },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
         "summary": "Move an entry into or out of a container",
         "tags": [
           "Inventory"
@@ -3718,6 +4227,16 @@
             },
             "description": "Bad request: malformed JSON, an unknown field, an invalid id, or a request that can't be carried out. Rules problems are never errors; they come back as warnings on the sheet."
           },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Sign in required: the bearer token is missing, unknown or expired."
+          },
           "404": {
             "content": {
               "application/json": {
@@ -3729,6 +4248,11 @@
             "description": "Not found: no such character, inventory entry, feature or content."
           }
         },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
         "summary": "Change a stack's quantity",
         "tags": [
           "Inventory"
@@ -3787,6 +4311,16 @@
             },
             "description": "Bad request: malformed JSON, an unknown field, an invalid id, or a request that can't be carried out. Rules problems are never errors; they come back as warnings on the sheet."
           },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Sign in required: the bearer token is missing, unknown or expired."
+          },
           "404": {
             "content": {
               "application/json": {
@@ -3798,6 +4332,11 @@
             "description": "Not found: no such character, inventory entry, feature or content."
           }
         },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
         "summary": "Add a level in a class",
         "tags": [
           "Play actions"
@@ -3862,6 +4401,16 @@
             },
             "description": "Bad request: malformed JSON, an unknown field, an invalid id, or a request that can't be carried out. Rules problems are never errors; they come back as warnings on the sheet."
           },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Sign in required: the bearer token is missing, unknown or expired."
+          },
           "404": {
             "content": {
               "application/json": {
@@ -3873,6 +4422,11 @@
             "description": "Not found: no such character, inventory entry, feature or content."
           }
         },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
         "summary": "Spend or restore a limited-use resource",
         "tags": [
           "Play actions"
@@ -3928,6 +4482,16 @@
             },
             "description": "Bad request: malformed JSON, an unknown field, an invalid id, or a request that can't be carried out. Rules problems are never errors; they come back as warnings on the sheet."
           },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Sign in required: the bearer token is missing, unknown or expired."
+          },
           "404": {
             "content": {
               "application/json": {
@@ -3939,6 +4503,11 @@
             "description": "Not found: no such character, inventory entry, feature or content."
           }
         },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
         "summary": "Take a short or long rest",
         "tags": [
           "Play actions"
@@ -3998,6 +4567,16 @@
             },
             "description": "Bad request: malformed JSON, an unknown field, an invalid id, or a request that can't be carried out. Rules problems are never errors; they come back as warnings on the sheet."
           },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Sign in required: the bearer token is missing, unknown or expired."
+          },
           "404": {
             "content": {
               "application/json": {
@@ -4009,6 +4588,11 @@
             "description": "Not found: no such character, inventory entry, feature or content."
           }
         },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
         "summary": "Remove a choice",
         "tags": [
           "Choices"
@@ -4067,6 +4651,16 @@
             },
             "description": "Bad request: malformed JSON, an unknown field, an invalid id, or a request that can't be carried out. Rules problems are never errors; they come back as warnings on the sheet."
           },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Sign in required: the bearer token is missing, unknown or expired."
+          },
           "404": {
             "content": {
               "application/json": {
@@ -4078,6 +4672,11 @@
             "description": "Not found: no such character, inventory entry, feature or content."
           }
         },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
         "summary": "Make or change a choice",
         "tags": [
           "Choices"
@@ -4120,6 +4719,16 @@
             },
             "description": "Bad request: malformed JSON, an unknown field, an invalid id, or a request that can't be carried out. Rules problems are never errors; they come back as warnings on the sheet."
           },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Sign in required: the bearer token is missing, unknown or expired."
+          },
           "404": {
             "content": {
               "application/json": {
@@ -4131,6 +4740,11 @@
             "description": "Not found: no such character, inventory entry, feature or content."
           }
         },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
         "summary": "Get the computed sheet",
         "tags": [
           "Sheet"
@@ -4187,6 +4801,16 @@
             },
             "description": "Bad request: malformed JSON, an unknown field, an invalid id, or a request that can't be carried out. Rules problems are never errors; they come back as warnings on the sheet."
           },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Sign in required: the bearer token is missing, unknown or expired."
+          },
           "404": {
             "content": {
               "application/json": {
@@ -4198,6 +4822,11 @@
             "description": "Not found: no such character, inventory entry, feature or content."
           }
         },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
         "summary": "Spend or restore spell slots",
         "tags": [
           "Play actions"
@@ -4241,6 +4870,16 @@
             },
             "description": "Counts and issues for the new content."
           },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Sign in required: the bearer token is missing, unknown or expired."
+          },
           "500": {
             "content": {
               "application/json": {
@@ -4262,6 +4901,11 @@
             "description": "Not supported by this server's configuration."
           }
         },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
         "summary": "Reload content from disk",
         "tags": [
           "Content"
@@ -4406,6 +5050,42 @@
         ]
       }
     },
+    "/api/me": {
+      "get": {
+        "operationId": "getMe",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/User"
+                }
+              }
+            },
+            "description": "The signed-in user."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Sign in required: the bearer token is missing, unknown or expired."
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "summary": "Who am I",
+        "tags": [
+          "Account"
+        ]
+      }
+    },
     "/api/ruleset": {
       "get": {
         "description": "Currencies, spell slot tables, the inspiration cap and other table-level settings, with defaults filled in.",
@@ -4462,8 +5142,23 @@
               }
             },
             "description": "Bad request: malformed JSON, an unknown field, an invalid id, or a request that can't be carried out. Rules problems are never errors; they come back as warnings on the sheet."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Sign in required: the bearer token is missing, unknown or expired."
           }
         },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
         "summary": "Compute a sheet without saving",
         "tags": [
           "Sheet"
@@ -4505,6 +5200,10 @@
     {
       "description": "The loaded classes, features, items, spells and skills, and reloading them.",
       "name": "Content"
+    },
+    {
+      "description": "Signing in with a code sent by Discord DM, signing out, and who you are.",
+      "name": "Account"
     },
     {
       "description": "Ruleset and health.",

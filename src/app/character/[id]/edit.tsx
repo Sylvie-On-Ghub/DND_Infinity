@@ -276,7 +276,8 @@ function LevelSection({ id, character, sheet }: { id: string; character: Charact
         }
       }
     },
-    onSuccess: () => {
+    // Also on failure: a 409 needs fresh data, and an earlier step may have gone through.
+    onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ["sheet", id] });
       queryClient.invalidateQueries({ queryKey: ["character", id] });
       queryClient.invalidateQueries({ queryKey: ["characters"] });

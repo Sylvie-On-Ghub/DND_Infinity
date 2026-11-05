@@ -4,6 +4,66 @@
  */
 
 export interface paths {
+    "/api/auth/logout": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Sign out
+         * @description Ends the session this token belongs to. Other devices stay signed in.
+         */
+        post: operations["logout"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/auth/otp/request": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Ask for a login code
+         * @description Sends a 6-digit code by Discord DM, valid for 10 minutes, if the username is approved. The response is the same whether or not it is, and whether or not the DM could be sent. Asking again replaces any earlier code. Limited to 1 request a minute and 5 an hour per username, plus a limit per client address.
+         */
+        post: operations["requestLoginCode"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/auth/otp/verify": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Sign in with a login code
+         * @description Exchanges a code for a session token, which is only ever returned here. A code works once, and stops working after 5 failed attempts. An unknown username, a wrong code and an expired code all get the same 401.
+         */
+        post: operations["verifyLoginCode"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/characters": {
         parameters: {
             query?: never;
@@ -13,7 +73,7 @@ export interface paths {
         };
         /**
          * List characters
-         * @description Id, name, level and classes for every saved character, sorted by name. A character whose file can't be read is included with `error` set.
+         * @description Id, name, level and classes for every saved character, sorted by name.
          */
         get: operations["listCharacters"];
         put?: never;
@@ -42,7 +102,7 @@ export interface paths {
         get: operations["getCharacter"];
         /**
          * Replace a character
-         * @description Replaces the whole character. The character must already exist, and the body's `id` (if given) must match the URL.
+         * @description Replaces the whole character. The character must already exist, and the body's `id` (if given) must match the URL. `version` is required: send the one you read, and if the character has changed since then the request fails with a 409 and nothing is saved.
          */
         put: operations["replaceCharacter"];
         post?: never;
@@ -52,7 +112,7 @@ export interface paths {
         head?: never;
         /**
          * Edit some fields of a character
-         * @description JSON merge patch (RFC 7386): send only what changes. Objects merge, arrays replace whole, and `null` clears a field. The result must still be a valid character, so a misspelt field is a 400. A character's id can't be changed.
+         * @description JSON merge patch (RFC 7386): send only what changes. Objects merge, arrays replace whole, and `null` clears a field. The result must still be a valid character, so a misspelt field is a 400. A character's id can't be changed. `version` is required: send the one you read, and if the character has changed since then the request fails with a 409 and nothing is saved.
          */
         patch: operations["patchCharacter"];
         trace?: never;
@@ -460,6 +520,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/me": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Who am I */
+        get: operations["getMe"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/ruleset": {
         parameters: {
             query?: never;
@@ -676,12 +753,12 @@ export interface components {
             tools?: {
                 [key: string]: "none" | "half" | "trained" | "expert";
             };
+            /** @description Goes up by one with every change, including play actions. PUT and PATCH must send the latest one you have. */
+            version?: number;
             weapon_profs?: string[];
         };
         CharacterSummary: {
             class_ids?: string[];
-            /** @description Set when the stored data couldn't be read. */
-            error?: string;
             id?: string;
             level?: number;
             name?: string;
@@ -869,6 +946,10 @@ export interface components {
             base?: number;
             terms?: components["schemas"]["Term"][];
         };
+        GrantedSpells: {
+            min_level?: number;
+            spell_ids?: string[];
+        };
         Grants: {
             armour_profs?: string[];
             feature_ids?: string[];
@@ -969,6 +1050,13 @@ export interface components {
             class_id?: string;
             hp?: components["schemas"]["HPChoice"];
         };
+        LoginCodeRequest: {
+            username?: string;
+        };
+        LoginCodeVerifyRequest: {
+            code?: string;
+            username?: string;
+        };
         Modifier: {
             allow_stack?: boolean;
             condition?: string;
@@ -984,6 +1072,9 @@ export interface components {
         MoveRequest: {
             container?: string;
             quantity?: number;
+        };
+        OTPRequested: {
+            message?: string;
         };
         Option: {
             grants?: components["schemas"]["Grants"];
@@ -1003,6 +1094,8 @@ export interface components {
         };
         PoolFilter: {
             allowed?: string[];
+            level?: number;
+            spell_list?: string;
             tag?: string;
             type?: string;
         };
@@ -1074,6 +1167,11 @@ export interface components {
             name?: string;
             range?: number;
         };
+        SessionResponse: {
+            /** Format: date-time */
+            expires_at?: string;
+            token?: string;
+        };
         /** @description Everything the rules engine computes for a character. Never stored; recomputed on every request. */
         Sheet: {
             abilities?: {
@@ -1124,6 +1222,8 @@ export interface components {
             tools?: {
                 [key: string]: components["schemas"]["ToolView"];
             };
+            /** @description The character's version at the time of this sheet. Use it for the next PUT or PATCH. */
+            version?: number;
             vulnerabilities?: string[];
             /** @description Coins by denomination and their total value in base units. */
             wallet?: components["schemas"]["WalletView"];
@@ -1238,6 +1338,7 @@ export interface components {
             description?: string;
             duration?: string;
             effects?: components["schemas"]["SpellEffectView"][];
+            granted?: boolean;
             higher_levels?: string;
             id?: string;
             level?: number;
@@ -1267,6 +1368,7 @@ export interface components {
         };
         Subclass: {
             expanded_spells?: string[];
+            granted_spells?: components["schemas"]["GrantedSpells"][];
             id?: string;
             levels?: string[][];
             name?: string;
@@ -1293,6 +1395,12 @@ export interface components {
             dice?: string;
             slot_level?: number;
         };
+        User: {
+            /** Format: date-time */
+            created_at?: string;
+            discord_username?: string;
+            id?: string;
+        };
         WalletView: {
             coins?: components["schemas"]["CoinView"][];
             total?: number;
@@ -1312,6 +1420,7 @@ export interface components {
         };
         WeaponStats: {
             attack?: components["schemas"]["AttackDetails"];
+            base_weapon?: string;
             category?: string;
             magic_bonus?: number;
             versatile_dice?: string;
@@ -1325,6 +1434,137 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    logout: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Signed out. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Sign in required: the bearer token is missing, unknown or expired. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    requestLoginCode: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                /**
+                 * @example {
+                 *       "username": "mira"
+                 *     }
+                 */
+                "application/json": components["schemas"]["LoginCodeRequest"];
+            };
+        };
+        responses: {
+            /** @description Accepted. */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OTPRequested"];
+                };
+            };
+            /** @description Bad request: malformed JSON, an unknown field, an invalid id, or a request that can't be carried out. Rules problems are never errors; they come back as warnings on the sheet. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Too many attempts. The `Retry-After` header says how many seconds to wait. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    verifyLoginCode: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                /**
+                 * @example {
+                 *       "username": "mira",
+                 *       "code": "123456"
+                 *     }
+                 */
+                "application/json": components["schemas"]["LoginCodeVerifyRequest"];
+            };
+        };
+        responses: {
+            /** @description Signed in. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SessionResponse"];
+                };
+            };
+            /** @description Bad request: malformed JSON, an unknown field, an invalid id, or a request that can't be carried out. Rules problems are never errors; they come back as warnings on the sheet. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Sign in required: the bearer token is missing, unknown or expired. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Too many attempts. The `Retry-After` header says how many seconds to wait. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     listCharacters: {
         parameters: {
             query?: never;
@@ -1341,6 +1581,15 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["CharacterSummary"][];
+                };
+            };
+            /** @description Sign in required: the bearer token is missing, unknown or expired. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
         };
@@ -1396,7 +1645,16 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description A character with that id already exists. */
+            /** @description Sign in required: the bearer token is missing, unknown or expired. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `already_exists`: you already have a character with that id. `version_conflict`: the character has changed since you read it, so fetch it again and retry. */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -1437,6 +1695,15 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
+            /** @description Sign in required: the bearer token is missing, unknown or expired. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
             /** @description Not found: no such character, inventory entry, feature or content. */
             404: {
                 headers: {
@@ -1464,7 +1731,7 @@ export interface operations {
             };
         };
         responses: {
-            /** @description The saved character. */
+            /** @description The saved character, with its new version. */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -1482,8 +1749,26 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
+            /** @description Sign in required: the bearer token is missing, unknown or expired. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
             /** @description Not found: no such character, inventory entry, feature or content. */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `already_exists`: you already have a character with that id. `version_conflict`: the character has changed since you read it, so fetch it again and retry. */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -1521,6 +1806,15 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
+            /** @description Sign in required: the bearer token is missing, unknown or expired. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
             /** @description Not found: no such character, inventory entry, feature or content. */
             404: {
                 headers: {
@@ -1546,6 +1840,7 @@ export interface operations {
             content: {
                 /**
                  * @example {
+                 *       "version": 3,
                  *       "inspiration": 2,
                  *       "spellbooks": {
                  *         "class:wizard": {
@@ -1560,7 +1855,7 @@ export interface operations {
             };
         };
         responses: {
-            /** @description The patched character. */
+            /** @description The patched character, with its new version. */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -1578,8 +1873,26 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
+            /** @description Sign in required: the bearer token is missing, unknown or expired. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
             /** @description Not found: no such character, inventory entry, feature or content. */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `already_exists`: you already have a character with that id. `version_conflict`: the character has changed since you read it, so fetch it again and retry. */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -1629,6 +1942,15 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
+            /** @description Sign in required: the bearer token is missing, unknown or expired. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
             /** @description Not found: no such character, inventory entry, feature or content. */
             404: {
                 headers: {
@@ -1666,6 +1988,15 @@ export interface operations {
             };
             /** @description Bad request: malformed JSON, an unknown field, an invalid id, or a request that can't be carried out. Rules problems are never errors; they come back as warnings on the sheet. */
             400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Sign in required: the bearer token is missing, unknown or expired. */
+            401: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -1719,6 +2050,15 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
+            /** @description Sign in required: the bearer token is missing, unknown or expired. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
             /** @description Not found: no such character, inventory entry, feature or content. */
             404: {
                 headers: {
@@ -1764,6 +2104,15 @@ export interface operations {
             };
             /** @description Bad request: malformed JSON, an unknown field, an invalid id, or a request that can't be carried out. Rules problems are never errors; they come back as warnings on the sheet. */
             400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Sign in required: the bearer token is missing, unknown or expired. */
+            401: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -1827,6 +2176,15 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
+            /** @description Sign in required: the bearer token is missing, unknown or expired. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
             /** @description Not found: no such character, inventory entry, feature or content. */
             404: {
                 headers: {
@@ -1870,6 +2228,15 @@ export interface operations {
             };
             /** @description Bad request: malformed JSON, an unknown field, an invalid id, or a request that can't be carried out. Rules problems are never errors; they come back as warnings on the sheet. */
             400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Sign in required: the bearer token is missing, unknown or expired. */
+            401: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -1928,6 +2295,15 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
+            /** @description Sign in required: the bearer token is missing, unknown or expired. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
             /** @description Not found: no such character, inventory entry, feature or content. */
             404: {
                 headers: {
@@ -1967,6 +2343,15 @@ export interface operations {
             };
             /** @description Bad request: malformed JSON, an unknown field, an invalid id, or a request that can't be carried out. Rules problems are never errors; they come back as warnings on the sheet. */
             400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Sign in required: the bearer token is missing, unknown or expired. */
+            401: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -2030,6 +2415,15 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
+            /** @description Sign in required: the bearer token is missing, unknown or expired. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
             /** @description Not found: no such character, inventory entry, feature or content. */
             404: {
                 headers: {
@@ -2083,6 +2477,15 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
+            /** @description Sign in required: the bearer token is missing, unknown or expired. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
             /** @description Not found: no such character, inventory entry, feature or content. */
             404: {
                 headers: {
@@ -2128,6 +2531,15 @@ export interface operations {
             };
             /** @description Bad request: malformed JSON, an unknown field, an invalid id, or a request that can't be carried out. Rules problems are never errors; they come back as warnings on the sheet. */
             400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Sign in required: the bearer token is missing, unknown or expired. */
+            401: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -2188,6 +2600,15 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
+            /** @description Sign in required: the bearer token is missing, unknown or expired. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
             /** @description Not found: no such character, inventory entry, feature or content. */
             404: {
                 headers: {
@@ -2240,6 +2661,15 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
+            /** @description Sign in required: the bearer token is missing, unknown or expired. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
             /** @description Not found: no such character, inventory entry, feature or content. */
             404: {
                 headers: {
@@ -2283,6 +2713,15 @@ export interface operations {
             };
             /** @description Bad request: malformed JSON, an unknown field, an invalid id, or a request that can't be carried out. Rules problems are never errors; they come back as warnings on the sheet. */
             400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Sign in required: the bearer token is missing, unknown or expired. */
+            401: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -2345,6 +2784,15 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
+            /** @description Sign in required: the bearer token is missing, unknown or expired. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
             /** @description Not found: no such character, inventory entry, feature or content. */
             404: {
                 headers: {
@@ -2391,6 +2839,15 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
+            /** @description Sign in required: the bearer token is missing, unknown or expired. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
             /** @description Not found: no such character, inventory entry, feature or content. */
             404: {
                 headers: {
@@ -2425,6 +2882,15 @@ export interface operations {
             };
             /** @description Bad request: malformed JSON, an unknown field, an invalid id, or a request that can't be carried out. Rules problems are never errors; they come back as warnings on the sheet. */
             400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Sign in required: the bearer token is missing, unknown or expired. */
+            401: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -2483,6 +2949,15 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
+            /** @description Sign in required: the bearer token is missing, unknown or expired. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
             /** @description Not found: no such character, inventory entry, feature or content. */
             404: {
                 headers: {
@@ -2530,6 +3005,15 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ContentOverview"];
+                };
+            };
+            /** @description Sign in required: the bearer token is missing, unknown or expired. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
             /** @description Unexpected server error. */
@@ -2638,6 +3122,35 @@ export interface operations {
             };
         };
     };
+    getMe: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The signed-in user. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["User"];
+                };
+            };
+            /** @description Sign in required: the bearer token is missing, unknown or expired. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     getRuleset: {
         parameters: {
             query?: never;
@@ -2682,6 +3195,15 @@ export interface operations {
             };
             /** @description Bad request: malformed JSON, an unknown field, an invalid id, or a request that can't be carried out. Rules problems are never errors; they come back as warnings on the sheet. */
             400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Sign in required: the bearer token is missing, unknown or expired. */
+            401: {
                 headers: {
                     [name: string]: unknown;
                 };
