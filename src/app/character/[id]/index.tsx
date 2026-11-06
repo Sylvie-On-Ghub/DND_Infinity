@@ -6,6 +6,7 @@ import { Page } from "@/components/Page";
 import { getSheet } from "@/lib/api/characters";
 import type { AbilityView, Modifier } from "@/lib/api/client";
 import { C } from "@/lib/colors";
+import { targetLabel } from "@/lib/format";
 
 const ABILITIES = [
   ["str", "Str"],
@@ -117,10 +118,25 @@ function AbilityTile({ label, a }: { label: string; a?: AbilityView }) {
     </View>
   );
 }
+// Resistance, immunity and vulnerability are all-or-nothing, so they have no number to show.
+const DAMAGE_TRAITS: Record<string, string> = {
+  resist: "Resist",
+  immune: "Immune to",
+  vuln: "Vulnerable to",
+};
+
+function damageTrait(m: Modifier): string | undefined {
+  const [prefix, ...type] = (m.target ?? "").split(".");
+  const label = DAMAGE_TRAITS[prefix];
+  return label && type.length > 0 ? `${label} ${pretty(type.join(".")).toLowerCase()}` : undefined;
+}
+
 function noteText(m: Modifier): string {
-  const where = m.target ? ` on ${pretty(m.target).toLowerCase()}` : "";
+  const where = m.target ? ` on ${targetLabel(m.target)}` : "";
   const cond = m.condition ? ` (${m.condition})` : "";
   if (m.note) return m.note + cond;
+  const trait = damageTrait(m);
+  if (trait) return trait + cond;
   switch (m.kind) {
     case "advantage":
       return `Advantage${where}${cond}`;
@@ -143,7 +159,7 @@ function NoteRow({ m }: { m: Modifier }) {
   const icon =
     m.kind === "advantage" ? { t: "▲", c: C.success }
     : m.kind === "disadvantage" ? { t: "▼", c: C.danger }
-    : m.kind === "add" ? { t: (m.value ?? 0) >= 0 ? "+" : "−", c: C.accent }
+    : m.kind === "add" && !damageTrait(m) ? { t: (m.value ?? 0) >= 0 ? "+" : "−", c: C.accent }
     : { t: "•", c: C.textSecondary };
 
   return (
