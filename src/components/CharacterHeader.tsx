@@ -6,6 +6,7 @@ import { Text } from "@/components/Text";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { getCharacter, getSheet, listContent } from "@/lib/api/characters";
 import { AcModal } from "./AcModal";
+import { CharacterModal } from "./CharacterModal";
 import { ConditionsModal } from "./ConditionsModal";
 import { HpModal } from "./HpModal";
 import { InspirationModal } from "./InspirationModal";
@@ -27,6 +28,7 @@ export function CharacterHeader({ id }: { id: string }) {
   const [portraitOpen, setPortraitOpen] = useState(false);
   const [inspirationOpen, setInspirationOpen] = useState(false);
   const [conditionsOpen, setConditionsOpen] = useState(false);
+  const [characterOpen, setCharacterOpen] = useState(false);
 
   // Same query keys as the screens below, so the cache is shared.
   const sheet = useQuery({ queryKey: ["sheet", id], queryFn: () => getSheet(id) }).data;
@@ -60,7 +62,12 @@ export function CharacterHeader({ id }: { id: string }) {
         <Pressable onPress={() => router.back()} hitSlop={12}>
           <Text style={styles.back}>‹</Text>
         </Pressable>
-        <Text style={styles.name}>{character?.name ?? "…"}</Text>
+        <Pressable onPress={() => setCharacterOpen(true)} disabled={!character} hitSlop={6}>
+          <Text style={styles.name}>
+            {character?.name ?? "…"}
+            {character && <Text style={styles.edit}> ✎</Text>}
+          </Text>
+        </Pressable>
         <Text style={styles.sub}>
           {[pretty(character?.race_id), classLine].filter(Boolean).join(" · ")}
         </Text>
@@ -136,6 +143,14 @@ export function CharacterHeader({ id }: { id: string }) {
           exhaustion={exhaustion}
         />
       )}
+      {/* Mounted only while open, so the inputs start fresh each time. */}
+      {characterOpen && character && (
+        <CharacterModal
+          id={id}
+          onClose={() => setCharacterOpen(false)}
+          name={character.name ?? ""}
+        />
+      )}
       {/* Mounted only while open, so the input starts from the saved link each time. */}
       {portraitOpen && (
         <PortraitModal
@@ -175,6 +190,7 @@ const styles = StyleSheet.create({
   titleRow: { flexDirection: "row", alignItems: "baseline", flexWrap: "wrap", gap: 8, marginBottom: 8 },
   back: { fontSize: 28, lineHeight: 28, color: C.accent, paddingRight: 4 },
   name: { fontSize: 20, fontWeight: "700" },
+  edit: { fontSize: 15, fontWeight: "400", color: C.muted },
   sub: { fontSize: 14, color: C.textSecondary, flexShrink: 1 },
   body: { flexDirection: "row", gap: 8 },
   col: { flex: 1, gap: 6 },

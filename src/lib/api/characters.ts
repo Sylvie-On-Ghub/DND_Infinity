@@ -27,6 +27,15 @@ export const damage = async (id: string, amount: number) =>
     })
   );
 
+// A 204 has no body, which unwrap would read as a failure, so only hand it errors.
+export const deleteCharacter = async (id: string) => {
+  const { error, response } = await api.DELETE("/api/characters/{id}", {
+    params: { path: { id } },
+  });
+  if (!response.ok) unwrap({ error: error ?? {}, response });
+  forgetVersion(id);
+};
+
   export const getCharacter = async (id: string) =>
   unwrap(
     await api.GET("/api/characters/{id}", {
