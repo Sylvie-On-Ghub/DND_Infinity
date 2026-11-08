@@ -322,6 +322,87 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/characters/{id}/pets": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Add a pet
+         * @description `creature_id` is a stat block from /api/content/creatures; `source_id` is the feature or spell that grants it (`find_familiar`, `pact_of_the_chain`...). The pet starts active at full HP. A source the character doesn't have, or one that doesn't allow that creature, is a warning on the pet, not an error. Returns the pet's id in `pet_id`.
+         */
+        post: operations["addPet"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/characters/{id}/pets/{petId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Remove a pet */
+        delete: operations["removePet"];
+        options?: never;
+        head?: never;
+        /**
+         * Change a pet
+         * @description Send any of `name`, `notes`, `status` (active, dismissed, dead), `creature_id` and `modifiers` (replaces the list). A new `creature_id` is a new form, as when recasting Find Familiar: HP resets to its maximum and temp HP and conditions clear. Setting a dead pet back to active restores its HP.
+         */
+        patch: operations["patchPet"];
+        trace?: never;
+    };
+    "/api/characters/{id}/pets/{petId}/conditions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Add or remove a pet's conditions
+         * @description Same body as the character's conditions action, without exhaustion.
+         */
+        post: operations["petConditions"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/characters/{id}/pets/{petId}/hp": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Damage, heal or set a pet's HP
+         * @description Same body as the character's HP action. A pet that drops to 0 HP becomes `dead`; healing doesn't revive it.
+         */
+        post: operations["petHP"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/characters/{id}/resources/{featureId}": {
         parameters: {
             query?: never;
@@ -633,13 +714,16 @@ export interface components {
             feature_id?: string;
             is_attack?: boolean;
             name?: string;
-            /** @description On the sheet: the granting feature's limited-use resource, matching resources[].feature_id. Usually the same as feature_id; a resource attached to a feature's spells is keyed feature:<id>. Absent when there is none. Ignored in content. */
+            /** @description In content: a feature whose resource this action spends, such as a subclass's option for the class's Channel Divinity. Never on the sheet, where it becomes resource_id. */
+            resource_from?: string;
+            /** @description On the sheet: the granting feature's limited-use resource, matching resources[].feature_id. Usually the same as feature_id; a resource attached to a feature's spells is keyed feature:<id>. With resource_from in content, that feature's resource instead. Absent when there is none. Ignored in content. */
             resource_id?: string;
             /** @enum {string} */
             type?: "action" | "bonus_action" | "reaction" | "free" | "other";
         };
         ActionResponse: {
             entry_id?: string;
+            pet_id?: string;
             removed?: boolean;
             sheet?: components["schemas"]["Sheet"];
         };
@@ -653,6 +737,11 @@ export interface components {
             /** @description Weapons, armour and shields: variations such as silvered or +1. See InventoryItem.tags. */
             tags?: string[];
         };
+        AddPetRequest: {
+            creature_id?: string;
+            name?: string;
+            source_id?: string;
+        };
         AttackDetails: {
             /** @enum {string} */
             ability?: "str" | "dex" | "con" | "int" | "wis" | "cha";
@@ -663,6 +752,8 @@ export interface components {
             range_long?: number;
             range_normal?: number;
             ranged?: boolean;
+            thrown_long?: number;
+            thrown_normal?: number;
         };
         AttackView: {
             /** @enum {string} */
@@ -682,6 +773,10 @@ export interface components {
             range_normal?: number;
             to_hit?: number;
             versatile_dice?: string;
+        };
+        AttunementView: {
+            attuned?: number;
+            max?: number;
         };
         CarryView: {
             capacity?: number;
@@ -708,7 +803,6 @@ export interface components {
             coins?: {
                 [key: string]: number;
             };
-            companion_ids?: string[];
             concentrating?: string;
             conditions?: string[];
             current_hp?: number;
@@ -727,6 +821,7 @@ export interface components {
             name?: string;
             organisation_ids?: string[];
             pact_slots_used?: number;
+            pets?: components["schemas"]["Pet"][];
             /** @description A link to an image for the character, http or https. The server stores the link only; the browser loads the image. Clear it with null in a PATCH. */
             portrait_url?: string;
             /** @description A feature tagged race. List them at /api/content/races and set this with PATCH. */
@@ -853,6 +948,10 @@ export interface components {
             from?: string;
             to?: string;
         };
+        CreatureRef: {
+            id?: string;
+            name?: string;
+        };
         CurrencyDef: {
             abbrev?: string;
             id?: string;
@@ -918,6 +1017,7 @@ export interface components {
             name?: string;
             /** @enum {string} */
             origin?: "class" | "race" | "background" | "feat" | "item" | "other";
+            pets?: components["schemas"]["PetGrant"];
             prerequisites?: components["schemas"]["Prerequisite"][];
             repeatable?: boolean;
             resource?: components["schemas"]["Resource"];
@@ -1073,9 +1173,21 @@ export interface components {
             /** @enum {string} */
             kind?: "add" | "set" | "min" | "multiply" | "advantage" | "disadvantage" | "note";
             note?: string;
+            /** @description Limits the modifier to certain equipment. armour: a suit of armour is equipped (a shield doesn't count). no_heavy_armour_or_shield: neither is equipped. no_heavy_armour: no heavy armour is equipped, though a shield is fine. no_armour_or_shield: no armour and no shield is equipped. one_handed_melee_alone: only on the attack of a melee weapon that isn't two-handed, with no other weapon equipped. thrown_weapon: only on attacks made by throwing a weapon. melee_weapon: only on attacks made with a melee weapon, so not an unarmed strike. weapon: only on attacks made with a weapon, melee, ranged or thrown. */
+            requires?: string;
             source_id?: string;
             target?: string;
             value?: number;
+            /**
+             * @description Uses this ability's modifier as the value, with value as the minimum (for example Aura of Protection: Charisma, minimum +1). Only with kind add.
+             * @enum {string}
+             */
+            value_ability?: "str" | "dex" | "con" | "int" | "wis" | "cha";
+            /**
+             * @description Uses this speed as the value, for example a swimming speed equal to your walking speed. Pair it with kind min.
+             * @enum {string}
+             */
+            value_speed?: "walk" | "fly" | "swim" | "climb" | "burrow";
         };
         MoveRequest: {
             container?: string;
@@ -1100,6 +1212,79 @@ export interface components {
             prompt?: string;
             remaining?: number;
         };
+        Pet: {
+            conditions?: string[];
+            creature_id?: string;
+            current_hp?: number;
+            id?: string;
+            modifiers?: components["schemas"]["Modifier"][];
+            name?: string;
+            notes?: string;
+            source_id?: string;
+            status?: string;
+            temp_hp?: number;
+        };
+        PetAttackView: {
+            damage?: string;
+            description?: string;
+            name?: string;
+            range?: string;
+            to_hit?: number;
+            /** @enum {string} */
+            type?: "action" | "bonus_action" | "reaction" | "free" | "other";
+        };
+        PetGrant: {
+            creature_ids?: string[];
+            tags?: string[];
+        };
+        PetPatch: {
+            creature_id?: string;
+            modifiers?: components["schemas"]["Modifier"][];
+            name?: string;
+            notes?: string;
+            status?: string;
+        };
+        PetSourceView: {
+            active?: number;
+            creatures?: components["schemas"]["CreatureRef"][];
+            kind?: string;
+            name?: string;
+            source_id?: string;
+        };
+        PetView: {
+            abilities?: {
+                [key: string]: components["schemas"]["AbilityView"];
+            };
+            ac?: number;
+            actions?: components["schemas"]["Action"][];
+            attacks?: components["schemas"]["PetAttackView"][];
+            conditions?: string[];
+            creature_id?: string;
+            creature_name?: string;
+            current_hp?: number;
+            id?: string;
+            immunities?: string[];
+            languages?: string[];
+            max_hp?: number;
+            name?: string;
+            notes?: components["schemas"]["Modifier"][];
+            proficiency_bonus?: number;
+            resistances?: string[];
+            senses?: components["schemas"]["Sense"][];
+            size?: string;
+            skills?: {
+                [key: string]: components["schemas"]["SkillView"];
+            };
+            source_id?: string;
+            speeds?: {
+                [key: string]: number;
+            };
+            status?: string;
+            temp_hp?: number;
+            traits?: components["schemas"]["Trait"][];
+            type?: string;
+            warnings?: components["schemas"]["Warning"][];
+        };
         PoolFilter: {
             allowed?: string[];
             level?: number;
@@ -1123,9 +1308,12 @@ export interface components {
             max?: number;
             /** @enum {string} */
             max_ability?: "str" | "dex" | "con" | "int" | "wis" | "cha";
+            max_bonus?: number;
             name?: string;
             /** @enum {string} */
             recharge?: "short_rest" | "long_rest" | "dawn" | "none";
+            /** @description Uses a Short Rest gives back when recharge is a longer rest, such as one use of Channel Divinity. A Long Rest still restores them all. */
+            short_rest_regain?: number;
         };
         ResourceAction: {
             restore?: number;
@@ -1139,6 +1327,8 @@ export interface components {
             /** @enum {string} */
             recharge?: "short_rest" | "long_rest" | "dawn" | "none";
             remaining?: number;
+            /** @description Uses a Short Rest gives back when recharge is a longer rest. A Long Rest still restores them all. */
+            short_rest_regain?: number;
             used?: number;
         };
         RestRequest: {
@@ -1193,6 +1383,8 @@ export interface components {
             armour_profs?: string[];
             /** @description Computed attacks for equipped weapons, feature-granted attacks, and an unarmed strike. */
             attacks?: components["schemas"]["AttackView"][];
+            /** @description Attuned items against the limit: the ruleset's max_attuned (default 3) changed by attunement.max modifiers. max is -1 when unlimited. */
+            attunement?: components["schemas"]["AttunementView"];
             /** @description Carried weight against capacity, and the encumbrance state. */
             carry?: components["schemas"]["CarryView"];
             /** @description Combined caster level for multiclass slot tables. Pact casters don't count. */
@@ -1212,11 +1404,16 @@ export interface components {
             pact_slots?: components["schemas"]["SlotView"];
             /** @description Choices the character is entitled to but hasn't made. Drives level-up flows. Fill them in with the selections endpoint. */
             pending_choices?: components["schemas"]["PendingChoice"][];
+            /** @description The features and castable spells that let the character keep a pet (Find Familiar, Pact of the Chain, Primal Companion), each with the creatures it allows and how many active pets it has. Use one to add a pet. */
+            pet_sources?: components["schemas"]["PetSourceView"][];
+            /** @description Each pet's computed stat block (scaled by its owner where the creature says so) and play state, with its own warnings. */
+            pets?: components["schemas"]["PetView"][];
             proficiency_bonus?: number;
             resistances?: string[];
             /** @description Limited-use feature resources with uses spent. */
             resources?: components["schemas"]["ResourceView"][];
             senses?: components["schemas"]["Sense"][];
+            short_rest_exhaustion?: number;
             skills?: {
                 [key: string]: components["schemas"]["SkillView"];
             };
@@ -1280,6 +1477,7 @@ export interface components {
             id?: string;
             level?: number;
             name?: string;
+            pets?: components["schemas"]["PetGrant"];
             range?: string;
             ritual?: boolean;
             /** @enum {string} */
@@ -1380,10 +1578,12 @@ export interface components {
             id?: string;
             levels?: string[][];
             name?: string;
+            spellcasting?: components["schemas"]["SpellcastingDef"];
         };
         Term: {
             div?: number;
             max?: number;
+            mul?: number;
             source?: string;
         };
         Tier: {
@@ -1398,6 +1598,10 @@ export interface components {
             /** @enum {string} */
             level?: "none" | "half" | "trained" | "expert";
             prof_bonus?: number;
+        };
+        Trait: {
+            description?: string;
+            name?: string;
         };
         UpcastEntry: {
             dice?: string;
@@ -1712,7 +1916,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Not found: no such character, inventory entry, feature or content. */
+            /** @description Not found: no such character, inventory entry, pet, feature or content. */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -1766,7 +1970,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Not found: no such character, inventory entry, feature or content. */
+            /** @description Not found: no such character, inventory entry, pet, feature or content. */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -1823,7 +2027,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Not found: no such character, inventory entry, feature or content. */
+            /** @description Not found: no such character, inventory entry, pet, feature or content. */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -1890,7 +2094,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Not found: no such character, inventory entry, feature or content. */
+            /** @description Not found: no such character, inventory entry, pet, feature or content. */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -1959,7 +2163,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Not found: no such character, inventory entry, feature or content. */
+            /** @description Not found: no such character, inventory entry, pet, feature or content. */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -2012,7 +2216,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Not found: no such character, inventory entry, feature or content. */
+            /** @description Not found: no such character, inventory entry, pet, feature or content. */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -2067,7 +2271,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Not found: no such character, inventory entry, feature or content. */
+            /** @description Not found: no such character, inventory entry, pet, feature or content. */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -2128,7 +2332,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Not found: no such character, inventory entry, feature or content. */
+            /** @description Not found: no such character, inventory entry, pet, feature or content. */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -2193,7 +2397,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Not found: no such character, inventory entry, feature or content. */
+            /** @description Not found: no such character, inventory entry, pet, feature or content. */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -2252,7 +2456,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Not found: no such character, inventory entry, feature or content. */
+            /** @description Not found: no such character, inventory entry, pet, feature or content. */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -2312,7 +2516,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Not found: no such character, inventory entry, feature or content. */
+            /** @description Not found: no such character, inventory entry, pet, feature or content. */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -2367,7 +2571,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Not found: no such character, inventory entry, feature or content. */
+            /** @description Not found: no such character, inventory entry, pet, feature or content. */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -2432,7 +2636,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Not found: no such character, inventory entry, feature or content. */
+            /** @description Not found: no such character, inventory entry, pet, feature or content. */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -2494,7 +2698,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Not found: no such character, inventory entry, feature or content. */
+            /** @description Not found: no such character, inventory entry, pet, feature or content. */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -2555,7 +2759,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Not found: no such character, inventory entry, feature or content. */
+            /** @description Not found: no such character, inventory entry, pet, feature or content. */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -2617,7 +2821,296 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Not found: no such character, inventory entry, feature or content. */
+            /** @description Not found: no such character, inventory entry, pet, feature or content. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    addPet: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A character id (letters, digits, - and _), or a content id on the content routes. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                /**
+                 * @example {
+                 *       "creature_id": "owl",
+                 *       "source_id": "find_familiar",
+                 *       "name": "Hoot"
+                 *     }
+                 */
+                "application/json": components["schemas"]["AddPetRequest"];
+            };
+        };
+        responses: {
+            /** @description The updated sheet and the pet id. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ActionResponse"];
+                };
+            };
+            /** @description Bad request: malformed JSON, an unknown field, an invalid id, or a request that can't be carried out. Rules problems are never errors; they come back as warnings on the sheet. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Sign in required: the bearer token is missing, unknown or expired. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not found: no such character, inventory entry, pet, feature or content. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    removePet: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A character id (letters, digits, - and _), or a content id on the content routes. */
+                id: string;
+                /** @description A pet id, as returned when the pet was added or in the sheet's pets. */
+                petId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The updated sheet. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ActionResponse"];
+                };
+            };
+            /** @description Sign in required: the bearer token is missing, unknown or expired. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not found: no such character, inventory entry, pet, feature or content. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    patchPet: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A character id (letters, digits, - and _), or a content id on the content routes. */
+                id: string;
+                /** @description A pet id, as returned when the pet was added or in the sheet's pets. */
+                petId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                /**
+                 * @example {
+                 *       "creature_id": "raven"
+                 *     }
+                 */
+                "application/json": components["schemas"]["PetPatch"];
+            };
+        };
+        responses: {
+            /** @description The updated sheet. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ActionResponse"];
+                };
+            };
+            /** @description Bad request: malformed JSON, an unknown field, an invalid id, or a request that can't be carried out. Rules problems are never errors; they come back as warnings on the sheet. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Sign in required: the bearer token is missing, unknown or expired. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not found: no such character, inventory entry, pet, feature or content. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    petConditions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A character id (letters, digits, - and _), or a content id on the content routes. */
+                id: string;
+                /** @description A pet id, as returned when the pet was added or in the sheet's pets. */
+                petId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                /**
+                 * @example {
+                 *       "add": [
+                 *         "prone"
+                 *       ]
+                 *     }
+                 */
+                "application/json": components["schemas"]["ConditionsAction"];
+            };
+        };
+        responses: {
+            /** @description The updated sheet. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ActionResponse"];
+                };
+            };
+            /** @description Bad request: malformed JSON, an unknown field, an invalid id, or a request that can't be carried out. Rules problems are never errors; they come back as warnings on the sheet. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Sign in required: the bearer token is missing, unknown or expired. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not found: no such character, inventory entry, pet, feature or content. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    petHP: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A character id (letters, digits, - and _), or a content id on the content routes. */
+                id: string;
+                /** @description A pet id, as returned when the pet was added or in the sheet's pets. */
+                petId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                /**
+                 * @example {
+                 *       "damage": 4
+                 *     }
+                 */
+                "application/json": components["schemas"]["HPAction"];
+            };
+        };
+        responses: {
+            /** @description The updated sheet. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ActionResponse"];
+                };
+            };
+            /** @description Bad request: malformed JSON, an unknown field, an invalid id, or a request that can't be carried out. Rules problems are never errors; they come back as warnings on the sheet. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Sign in required: the bearer token is missing, unknown or expired. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not found: no such character, inventory entry, pet, feature or content. */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -2678,7 +3171,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Not found: no such character, inventory entry, feature or content. */
+            /** @description Not found: no such character, inventory entry, pet, feature or content. */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -2737,7 +3230,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Not found: no such character, inventory entry, feature or content. */
+            /** @description Not found: no such character, inventory entry, pet, feature or content. */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -2801,7 +3294,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Not found: no such character, inventory entry, feature or content. */
+            /** @description Not found: no such character, inventory entry, pet, feature or content. */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -2856,7 +3349,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Not found: no such character, inventory entry, feature or content. */
+            /** @description Not found: no such character, inventory entry, pet, feature or content. */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -2906,7 +3399,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Not found: no such character, inventory entry, feature or content. */
+            /** @description Not found: no such character, inventory entry, pet, feature or content. */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -2966,7 +3459,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Not found: no such character, inventory entry, feature or content. */
+            /** @description Not found: no such character, inventory entry, pet, feature or content. */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -3049,7 +3542,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                /** @description One of features, items, classes, spells, spell-lists, skills, backgrounds, races. */
+                /** @description One of features, items, classes, spells, spell-lists, skills, backgrounds, races, creatures. */
                 kind: string;
             };
             cookie?: never;
@@ -3065,7 +3558,7 @@ export interface operations {
                     "application/json": components["schemas"]["ContentSummary"][];
                 };
             };
-            /** @description Not found: no such character, inventory entry, feature or content. */
+            /** @description Not found: no such character, inventory entry, pet, feature or content. */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -3081,7 +3574,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                /** @description One of features, items, classes, spells, spell-lists, skills, backgrounds, races. */
+                /** @description One of features, items, classes, spells, spell-lists, skills, backgrounds, races, creatures. */
                 kind: string;
                 /** @description A character id (letters, digits, - and _), or a content id on the content routes. */
                 id: string;
@@ -3099,7 +3592,7 @@ export interface operations {
                     "application/json": components["schemas"]["Class"] | components["schemas"]["Feature"] | components["schemas"]["Item"] | components["schemas"]["Spell"] | components["schemas"]["SpellList"] | components["schemas"]["SkillDef"];
                 };
             };
-            /** @description Not found: no such character, inventory entry, feature or content. */
+            /** @description Not found: no such character, inventory entry, pet, feature or content. */
             404: {
                 headers: {
                     [name: string]: unknown;

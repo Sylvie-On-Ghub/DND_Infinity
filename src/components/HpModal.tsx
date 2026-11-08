@@ -1,12 +1,15 @@
 import { useState } from "react";
 import { Modal, Pressable, View } from "react-native";
 import { Text, TextInput } from "@/components/Text";
-import { damage, heal, setTempHp } from "@/lib/api/characters";
+import { damage, heal, petHp, setTempHp } from "@/lib/api/characters";
 import { useSheetAction } from "@/lib/api/useSheetAction";
 import { C } from "@/lib/colors";
 
+// With a petId, this changes that pet's HP instead of the character's.
 export function HpModal({
   id,
+  petId,
+  title = "Hit points",
   visible,
   onClose,
   current,
@@ -14,6 +17,8 @@ export function HpModal({
   temp,
 }: {
   id: string;
+  petId?: string;
+  title?: string;
   visible: boolean;
   onClose: () => void;
   current: number;
@@ -33,6 +38,9 @@ export function HpModal({
   };
   const run = (fn: () => ReturnType<typeof damage>) =>
     action.mutate(fn, { onSuccess: close });
+  const doDamage = () => (petId ? petHp(id, petId, { damage: n }) : damage(id, n));
+  const doHeal = () => (petId ? petHp(id, petId, { heal: n }) : heal(id, n));
+  const doTemp = () => (petId ? petHp(id, petId, { temp: n }) : setTempHp(id, n));
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={close}>
@@ -45,7 +53,7 @@ export function HpModal({
           onPress={() => {}}
           style={{ backgroundColor: C.surface, borderRadius: 12, padding: 16, gap: 12 }}
         >
-          <Text style={{ fontSize: 20, fontWeight: "700" }}>Hit points</Text>
+          <Text style={{ fontSize: 20, fontWeight: "700" }}>{title}</Text>
           <Text style={{ fontSize: 28, fontWeight: "700" }}>
             {current} / {max}
             {temp > 0 && (
@@ -74,25 +82,26 @@ export function HpModal({
               label="Damage"
               color={C.danger}
               disabled={!valid || n === 0 || busy}
-              onPress={() => run(() => damage(id, n))}
+              onPress={() => run(doDamage)}
             />
             <Action
               label="Heal"
               color={C.success}
               disabled={!valid || n === 0 || busy}
-              onPress={() => run(() => heal(id, n))}
+              onPress={() => run(doHeal)}
             />
             <Action
               label="Set temp"
               color={C.accent}
               disabled={!valid || busy}
-              onPress={() => run(() => setTempHp(id, n))}
+              onPress={() => run(doTemp)}
             />
           </View>
 
           <Text style={{ color: C.muted, fontSize: 12 }}>
             Damage hits temp HP first. Set temp replaces the current temp HP
             rather than adding to it, and 0 clears it.
+            {petId && " A pet that drops to 0 HP dies, and healing won't bring it back."}
           </Text>
 
           {action.error && (
