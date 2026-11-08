@@ -148,8 +148,12 @@
           "name": {
             "type": "string"
           },
+          "resource_from": {
+            "description": "In content: a feature whose resource this action spends, such as a subclass's option for the class's Channel Divinity. Never on the sheet, where it becomes resource_id.",
+            "type": "string"
+          },
           "resource_id": {
-            "description": "On the sheet: the granting feature's limited-use resource, matching resources[].feature_id. Usually the same as feature_id; a resource attached to a feature's spells is keyed feature:\u003cid\u003e. Absent when there is none. Ignored in content.",
+            "description": "On the sheet: the granting feature's limited-use resource, matching resources[].feature_id. Usually the same as feature_id; a resource attached to a feature's spells is keyed feature:\u003cid\u003e. With resource_from in content, that feature's resource instead. Absent when there is none. Ignored in content.",
             "type": "string"
           },
           "type": {
@@ -168,6 +172,9 @@
       "ActionResponse": {
         "properties": {
           "entry_id": {
+            "type": "string"
+          },
+          "pet_id": {
             "type": "string"
           },
           "removed": {
@@ -209,6 +216,20 @@
         },
         "type": "object"
       },
+      "AddPetRequest": {
+        "properties": {
+          "creature_id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "source_id": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
       "AttackDetails": {
         "properties": {
           "ability": {
@@ -245,6 +266,12 @@
           },
           "ranged": {
             "type": "boolean"
+          },
+          "thrown_long": {
+            "type": "integer"
+          },
+          "thrown_normal": {
+            "type": "integer"
           }
         },
         "type": "object"
@@ -319,6 +346,17 @@
         },
         "type": "object"
       },
+      "AttunementView": {
+        "properties": {
+          "attuned": {
+            "type": "integer"
+          },
+          "max": {
+            "type": "integer"
+          }
+        },
+        "type": "object"
+      },
       "CarryView": {
         "properties": {
           "capacity": {
@@ -384,12 +422,6 @@
             },
             "description": "Currency id to amount. Negative means owed.",
             "type": "object"
-          },
-          "companion_ids": {
-            "items": {
-              "type": "string"
-            },
-            "type": "array"
           },
           "concentrating": {
             "type": "string"
@@ -465,6 +497,12 @@
           },
           "pact_slots_used": {
             "type": "integer"
+          },
+          "pets": {
+            "items": {
+              "$ref": "#/components/schemas/Pet"
+            },
+            "type": "array"
           },
           "portrait_url": {
             "description": "A link to an image for the character, http or https. The server stores the link only; the browser loads the image. Clear it with null in a PATCH.",
@@ -854,6 +892,17 @@
         },
         "type": "object"
       },
+      "CreatureRef": {
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
       "CurrencyDef": {
         "properties": {
           "abbrev": {
@@ -1056,6 +1105,9 @@
               "other"
             ],
             "type": "string"
+          },
+          "pets": {
+            "$ref": "#/components/schemas/PetGrant"
           },
           "prerequisites": {
             "items": {
@@ -1561,6 +1613,10 @@
           "note": {
             "type": "string"
           },
+          "requires": {
+            "description": "Limits the modifier to certain equipment. armour: a suit of armour is equipped (a shield doesn't count). no_heavy_armour_or_shield: neither is equipped. no_heavy_armour: no heavy armour is equipped, though a shield is fine. no_armour_or_shield: no armour and no shield is equipped. one_handed_melee_alone: only on the attack of a melee weapon that isn't two-handed, with no other weapon equipped. thrown_weapon: only on attacks made by throwing a weapon. melee_weapon: only on attacks made with a melee weapon, so not an unarmed strike. weapon: only on attacks made with a weapon, melee, ranged or thrown.",
+            "type": "string"
+          },
           "source_id": {
             "type": "string"
           },
@@ -1569,6 +1625,29 @@
           },
           "value": {
             "type": "integer"
+          },
+          "value_ability": {
+            "description": "Uses this ability's modifier as the value, with value as the minimum (for example Aura of Protection: Charisma, minimum +1). Only with kind add.",
+            "enum": [
+              "str",
+              "dex",
+              "con",
+              "int",
+              "wis",
+              "cha"
+            ],
+            "type": "string"
+          },
+          "value_speed": {
+            "description": "Uses this speed as the value, for example a swimming speed equal to your walking speed. Pair it with kind min.",
+            "enum": [
+              "walk",
+              "fly",
+              "swim",
+              "climb",
+              "burrow"
+            ],
+            "type": "string"
           }
         },
         "type": "object"
@@ -1636,6 +1715,262 @@
           },
           "remaining": {
             "type": "integer"
+          }
+        },
+        "type": "object"
+      },
+      "Pet": {
+        "properties": {
+          "conditions": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "creature_id": {
+            "type": "string"
+          },
+          "current_hp": {
+            "type": "integer"
+          },
+          "id": {
+            "type": "string"
+          },
+          "modifiers": {
+            "items": {
+              "$ref": "#/components/schemas/Modifier"
+            },
+            "type": "array"
+          },
+          "name": {
+            "type": "string"
+          },
+          "notes": {
+            "type": "string"
+          },
+          "source_id": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "temp_hp": {
+            "type": "integer"
+          }
+        },
+        "type": "object"
+      },
+      "PetAttackView": {
+        "properties": {
+          "damage": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "range": {
+            "type": "string"
+          },
+          "to_hit": {
+            "type": "integer"
+          },
+          "type": {
+            "enum": [
+              "action",
+              "bonus_action",
+              "reaction",
+              "free",
+              "other"
+            ],
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "PetGrant": {
+        "properties": {
+          "creature_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "tags": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          }
+        },
+        "type": "object"
+      },
+      "PetPatch": {
+        "properties": {
+          "creature_id": {
+            "type": "string"
+          },
+          "modifiers": {
+            "items": {
+              "$ref": "#/components/schemas/Modifier"
+            },
+            "type": "array"
+          },
+          "name": {
+            "type": "string"
+          },
+          "notes": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "PetSourceView": {
+        "properties": {
+          "active": {
+            "type": "integer"
+          },
+          "creatures": {
+            "items": {
+              "$ref": "#/components/schemas/CreatureRef"
+            },
+            "type": "array"
+          },
+          "kind": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "source_id": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "PetView": {
+        "properties": {
+          "abilities": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/AbilityView"
+            },
+            "type": "object"
+          },
+          "ac": {
+            "type": "integer"
+          },
+          "actions": {
+            "items": {
+              "$ref": "#/components/schemas/Action"
+            },
+            "type": "array"
+          },
+          "attacks": {
+            "items": {
+              "$ref": "#/components/schemas/PetAttackView"
+            },
+            "type": "array"
+          },
+          "conditions": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "creature_id": {
+            "type": "string"
+          },
+          "creature_name": {
+            "type": "string"
+          },
+          "current_hp": {
+            "type": "integer"
+          },
+          "id": {
+            "type": "string"
+          },
+          "immunities": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "languages": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "max_hp": {
+            "type": "integer"
+          },
+          "name": {
+            "type": "string"
+          },
+          "notes": {
+            "items": {
+              "$ref": "#/components/schemas/Modifier"
+            },
+            "type": "array"
+          },
+          "proficiency_bonus": {
+            "type": "integer"
+          },
+          "resistances": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "senses": {
+            "items": {
+              "$ref": "#/components/schemas/Sense"
+            },
+            "type": "array"
+          },
+          "size": {
+            "type": "string"
+          },
+          "skills": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/SkillView"
+            },
+            "type": "object"
+          },
+          "source_id": {
+            "type": "string"
+          },
+          "speeds": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "type": "object"
+          },
+          "status": {
+            "type": "string"
+          },
+          "temp_hp": {
+            "type": "integer"
+          },
+          "traits": {
+            "items": {
+              "$ref": "#/components/schemas/Trait"
+            },
+            "type": "array"
+          },
+          "type": {
+            "type": "string"
+          },
+          "warnings": {
+            "items": {
+              "$ref": "#/components/schemas/Warning"
+            },
+            "type": "array"
           }
         },
         "type": "object"
@@ -1712,6 +2047,9 @@
             ],
             "type": "string"
           },
+          "max_bonus": {
+            "type": "integer"
+          },
           "name": {
             "type": "string"
           },
@@ -1723,6 +2061,10 @@
               "none"
             ],
             "type": "string"
+          },
+          "short_rest_regain": {
+            "description": "Uses a Short Rest gives back when recharge is a longer rest, such as one use of Channel Divinity. A Long Rest still restores them all.",
+            "type": "integer"
           }
         },
         "type": "object"
@@ -1762,6 +2104,10 @@
             "type": "string"
           },
           "remaining": {
+            "type": "integer"
+          },
+          "short_rest_regain": {
+            "description": "Uses a Short Rest gives back when recharge is a longer rest. A Long Rest still restores them all.",
             "type": "integer"
           },
           "used": {
@@ -1931,6 +2277,14 @@
             },
             "type": "array"
           },
+          "attunement": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/AttunementView"
+              }
+            ],
+            "description": "Attuned items against the limit: the ruleset's max_attuned (default 3) changed by attunement.max modifiers. max is -1 when unlimited."
+          },
           "carry": {
             "allOf": [
               {
@@ -2000,6 +2354,20 @@
             },
             "type": "array"
           },
+          "pet_sources": {
+            "description": "The features and castable spells that let the character keep a pet (Find Familiar, Pact of the Chain, Primal Companion), each with the creatures it allows and how many active pets it has. Use one to add a pet.",
+            "items": {
+              "$ref": "#/components/schemas/PetSourceView"
+            },
+            "type": "array"
+          },
+          "pets": {
+            "description": "Each pet's computed stat block (scaled by its owner where the creature says so) and play state, with its own warnings.",
+            "items": {
+              "$ref": "#/components/schemas/PetView"
+            },
+            "type": "array"
+          },
           "proficiency_bonus": {
             "type": "integer"
           },
@@ -2021,6 +2389,9 @@
               "$ref": "#/components/schemas/Sense"
             },
             "type": "array"
+          },
+          "short_rest_exhaustion": {
+            "type": "integer"
           },
           "skills": {
             "additionalProperties": {
@@ -2221,6 +2592,9 @@
           },
           "name": {
             "type": "string"
+          },
+          "pets": {
+            "$ref": "#/components/schemas/PetGrant"
           },
           "range": {
             "type": "string"
@@ -2593,6 +2967,9 @@
           },
           "name": {
             "type": "string"
+          },
+          "spellcasting": {
+            "$ref": "#/components/schemas/SpellcastingDef"
           }
         },
         "type": "object"
@@ -2603,6 +2980,9 @@
             "type": "integer"
           },
           "max": {
+            "type": "integer"
+          },
+          "mul": {
             "type": "integer"
           },
           "source": {
@@ -2653,6 +3033,17 @@
           },
           "prof_bonus": {
             "type": "integer"
+          }
+        },
+        "type": "object"
+      },
+      "Trait": {
+        "properties": {
+          "description": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
           }
         },
         "type": "object"
@@ -3087,7 +3478,7 @@
                 }
               }
             },
-            "description": "Not found: no such character, inventory entry, feature or content."
+            "description": "Not found: no such character, inventory entry, pet, feature or content."
           }
         },
         "security": [
@@ -3153,7 +3544,7 @@
                 }
               }
             },
-            "description": "Not found: no such character, inventory entry, feature or content."
+            "description": "Not found: no such character, inventory entry, pet, feature or content."
           }
         },
         "security": [
@@ -3240,7 +3631,7 @@
                 }
               }
             },
-            "description": "Not found: no such character, inventory entry, feature or content."
+            "description": "Not found: no such character, inventory entry, pet, feature or content."
           },
           "409": {
             "content": {
@@ -3326,7 +3717,7 @@
                 }
               }
             },
-            "description": "Not found: no such character, inventory entry, feature or content."
+            "description": "Not found: no such character, inventory entry, pet, feature or content."
           },
           "409": {
             "content": {
@@ -3412,7 +3803,7 @@
                 }
               }
             },
-            "description": "Not found: no such character, inventory entry, feature or content."
+            "description": "Not found: no such character, inventory entry, pet, feature or content."
           }
         },
         "security": [
@@ -3492,7 +3883,7 @@
                 }
               }
             },
-            "description": "Not found: no such character, inventory entry, feature or content."
+            "description": "Not found: no such character, inventory entry, pet, feature or content."
           }
         },
         "security": [
@@ -3581,7 +3972,7 @@
                 }
               }
             },
-            "description": "Not found: no such character, inventory entry, feature or content."
+            "description": "Not found: no such character, inventory entry, pet, feature or content."
           }
         },
         "security": [
@@ -3664,7 +4055,7 @@
                 }
               }
             },
-            "description": "Not found: no such character, inventory entry, feature or content."
+            "description": "Not found: no such character, inventory entry, pet, feature or content."
           }
         },
         "security": [
@@ -3751,7 +4142,7 @@
                 }
               }
             },
-            "description": "Not found: no such character, inventory entry, feature or content."
+            "description": "Not found: no such character, inventory entry, pet, feature or content."
           }
         },
         "security": [
@@ -3832,7 +4223,7 @@
                 }
               }
             },
-            "description": "Not found: no such character, inventory entry, feature or content."
+            "description": "Not found: no such character, inventory entry, pet, feature or content."
           }
         },
         "security": [
@@ -3914,7 +4305,7 @@
                 }
               }
             },
-            "description": "Not found: no such character, inventory entry, feature or content."
+            "description": "Not found: no such character, inventory entry, pet, feature or content."
           }
         },
         "security": [
@@ -4000,7 +4391,7 @@
                 }
               }
             },
-            "description": "Not found: no such character, inventory entry, feature or content."
+            "description": "Not found: no such character, inventory entry, pet, feature or content."
           }
         },
         "security": [
@@ -4092,7 +4483,7 @@
                 }
               }
             },
-            "description": "Not found: no such character, inventory entry, feature or content."
+            "description": "Not found: no such character, inventory entry, pet, feature or content."
           }
         },
         "security": [
@@ -4183,7 +4574,7 @@
                 }
               }
             },
-            "description": "Not found: no such character, inventory entry, feature or content."
+            "description": "Not found: no such character, inventory entry, pet, feature or content."
           }
         },
         "security": [
@@ -4273,7 +4664,7 @@
                 }
               }
             },
-            "description": "Not found: no such character, inventory entry, feature or content."
+            "description": "Not found: no such character, inventory entry, pet, feature or content."
           }
         },
         "security": [
@@ -4357,7 +4748,7 @@
                 }
               }
             },
-            "description": "Not found: no such character, inventory entry, feature or content."
+            "description": "Not found: no such character, inventory entry, pet, feature or content."
           }
         },
         "security": [
@@ -4368,6 +4759,425 @@
         "summary": "Add a level in a class",
         "tags": [
           "Play actions"
+        ]
+      }
+    },
+    "/api/characters/{id}/pets": {
+      "post": {
+        "description": "`creature_id` is a stat block from /api/content/creatures; `source_id` is the feature or spell that grants it (`find_familiar`, `pact_of_the_chain`...). The pet starts active at full HP. A source the character doesn't have, or one that doesn't allow that creature, is a warning on the pet, not an error. Returns the pet's id in `pet_id`.",
+        "operationId": "addPet",
+        "parameters": [
+          {
+            "description": "A character id (letters, digits, - and _), or a content id on the content routes.",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "example": {
+                "creature_id": "owl",
+                "source_id": "find_familiar",
+                "name": "Hoot"
+              },
+              "schema": {
+                "$ref": "#/components/schemas/AddPetRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ActionResponse"
+                }
+              }
+            },
+            "description": "The updated sheet and the pet id."
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Bad request: malformed JSON, an unknown field, an invalid id, or a request that can't be carried out. Rules problems are never errors; they come back as warnings on the sheet."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Sign in required: the bearer token is missing, unknown or expired."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not found: no such character, inventory entry, pet, feature or content."
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "summary": "Add a pet",
+        "tags": [
+          "Pets"
+        ]
+      }
+    },
+    "/api/characters/{id}/pets/{petId}": {
+      "delete": {
+        "operationId": "removePet",
+        "parameters": [
+          {
+            "description": "A character id (letters, digits, - and _), or a content id on the content routes.",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "A pet id, as returned when the pet was added or in the sheet's pets.",
+            "in": "path",
+            "name": "petId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ActionResponse"
+                }
+              }
+            },
+            "description": "The updated sheet."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Sign in required: the bearer token is missing, unknown or expired."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not found: no such character, inventory entry, pet, feature or content."
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "summary": "Remove a pet",
+        "tags": [
+          "Pets"
+        ]
+      },
+      "patch": {
+        "description": "Send any of `name`, `notes`, `status` (active, dismissed, dead), `creature_id` and `modifiers` (replaces the list). A new `creature_id` is a new form, as when recasting Find Familiar: HP resets to its maximum and temp HP and conditions clear. Setting a dead pet back to active restores its HP.",
+        "operationId": "patchPet",
+        "parameters": [
+          {
+            "description": "A character id (letters, digits, - and _), or a content id on the content routes.",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "A pet id, as returned when the pet was added or in the sheet's pets.",
+            "in": "path",
+            "name": "petId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "example": {
+                "creature_id": "raven"
+              },
+              "schema": {
+                "$ref": "#/components/schemas/PetPatch"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ActionResponse"
+                }
+              }
+            },
+            "description": "The updated sheet."
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Bad request: malformed JSON, an unknown field, an invalid id, or a request that can't be carried out. Rules problems are never errors; they come back as warnings on the sheet."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Sign in required: the bearer token is missing, unknown or expired."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not found: no such character, inventory entry, pet, feature or content."
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "summary": "Change a pet",
+        "tags": [
+          "Pets"
+        ]
+      }
+    },
+    "/api/characters/{id}/pets/{petId}/conditions": {
+      "post": {
+        "description": "Same body as the character's conditions action, without exhaustion.",
+        "operationId": "petConditions",
+        "parameters": [
+          {
+            "description": "A character id (letters, digits, - and _), or a content id on the content routes.",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "A pet id, as returned when the pet was added or in the sheet's pets.",
+            "in": "path",
+            "name": "petId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "example": {
+                "add": [
+                  "prone"
+                ]
+              },
+              "schema": {
+                "$ref": "#/components/schemas/ConditionsAction"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ActionResponse"
+                }
+              }
+            },
+            "description": "The updated sheet."
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Bad request: malformed JSON, an unknown field, an invalid id, or a request that can't be carried out. Rules problems are never errors; they come back as warnings on the sheet."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Sign in required: the bearer token is missing, unknown or expired."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not found: no such character, inventory entry, pet, feature or content."
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "summary": "Add or remove a pet's conditions",
+        "tags": [
+          "Pets"
+        ]
+      }
+    },
+    "/api/characters/{id}/pets/{petId}/hp": {
+      "post": {
+        "description": "Same body as the character's HP action. A pet that drops to 0 HP becomes `dead`; healing doesn't revive it.",
+        "operationId": "petHP",
+        "parameters": [
+          {
+            "description": "A character id (letters, digits, - and _), or a content id on the content routes.",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "A pet id, as returned when the pet was added or in the sheet's pets.",
+            "in": "path",
+            "name": "petId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "example": {
+                "damage": 4
+              },
+              "schema": {
+                "$ref": "#/components/schemas/HPAction"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ActionResponse"
+                }
+              }
+            },
+            "description": "The updated sheet."
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Bad request: malformed JSON, an unknown field, an invalid id, or a request that can't be carried out. Rules problems are never errors; they come back as warnings on the sheet."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Sign in required: the bearer token is missing, unknown or expired."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not found: no such character, inventory entry, pet, feature or content."
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "summary": "Damage, heal or set a pet's HP",
+        "tags": [
+          "Pets"
         ]
       }
     },
@@ -4447,7 +5257,7 @@
                 }
               }
             },
-            "description": "Not found: no such character, inventory entry, feature or content."
+            "description": "Not found: no such character, inventory entry, pet, feature or content."
           }
         },
         "security": [
@@ -4528,7 +5338,7 @@
                 }
               }
             },
-            "description": "Not found: no such character, inventory entry, feature or content."
+            "description": "Not found: no such character, inventory entry, pet, feature or content."
           }
         },
         "security": [
@@ -4613,7 +5423,7 @@
                 }
               }
             },
-            "description": "Not found: no such character, inventory entry, feature or content."
+            "description": "Not found: no such character, inventory entry, pet, feature or content."
           }
         },
         "security": [
@@ -4697,7 +5507,7 @@
                 }
               }
             },
-            "description": "Not found: no such character, inventory entry, feature or content."
+            "description": "Not found: no such character, inventory entry, pet, feature or content."
           }
         },
         "security": [
@@ -4765,7 +5575,7 @@
                 }
               }
             },
-            "description": "Not found: no such character, inventory entry, feature or content."
+            "description": "Not found: no such character, inventory entry, pet, feature or content."
           }
         },
         "security": [
@@ -4847,7 +5657,7 @@
                 }
               }
             },
-            "description": "Not found: no such character, inventory entry, feature or content."
+            "description": "Not found: no such character, inventory entry, pet, feature or content."
           }
         },
         "security": [
@@ -4946,7 +5756,7 @@
         "operationId": "listContent",
         "parameters": [
           {
-            "description": "One of features, items, classes, spells, spell-lists, skills, backgrounds, races.",
+            "description": "One of features, items, classes, spells, spell-lists, skills, backgrounds, races, creatures.",
             "in": "path",
             "name": "kind",
             "required": true,
@@ -4977,7 +5787,7 @@
                 }
               }
             },
-            "description": "Not found: no such character, inventory entry, feature or content."
+            "description": "Not found: no such character, inventory entry, pet, feature or content."
           }
         },
         "summary": "List content of one kind",
@@ -4992,7 +5802,7 @@
         "operationId": "getContent",
         "parameters": [
           {
-            "description": "One of features, items, classes, spells, spell-lists, skills, backgrounds, races.",
+            "description": "One of features, items, classes, spells, spell-lists, skills, backgrounds, races, creatures.",
             "in": "path",
             "name": "kind",
             "required": true,
@@ -5048,7 +5858,7 @@
                 }
               }
             },
-            "description": "Not found: no such character, inventory entry, feature or content."
+            "description": "Not found: no such character, inventory entry, pet, feature or content."
           }
         },
         "summary": "Get one content definition",
@@ -5216,6 +6026,10 @@
     {
       "description": "Pending choices, their options, selections, and acknowledging warnings.",
       "name": "Choices"
+    },
+    {
+      "description": "Familiars and companions: their stat blocks are on the sheet under `pets`.",
+      "name": "Pets"
     },
     {
       "description": "Items, containers and equipment.",

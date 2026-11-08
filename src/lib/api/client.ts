@@ -57,6 +57,8 @@ export type EntryPatch = components["schemas"]["EntryPatch"];
 export type CoinsAction = components["schemas"]["CoinsAction"];
 export type ACOption = components["schemas"]["ACOption"];
 export type ResourceView = components["schemas"]["ResourceView"];
+export type PetView = components["schemas"]["PetView"];
+export type PetSourceView = components["schemas"]["PetSourceView"];
 export type FeatureView = NonNullable<Sheet["features"]>[number];
 
 export class ApiRequestError extends Error {

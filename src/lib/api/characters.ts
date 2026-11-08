@@ -295,3 +295,35 @@ export const changeCoins = async (id: string, body: CoinsAction) =>
       body,
     })
   );
+
+export const petHp = async (
+  id: string,
+  petId: string,
+  body: { damage?: number; heal?: number; temp?: number; set?: number }
+) =>
+  unwrap(
+    await api.POST("/api/characters/{id}/pets/{petId}/hp", {
+      params: { path: { id, petId } },
+      body,
+    })
+  );
+
+// Healing doesn't revive a dead pet; setting it back to active does, at full HP.
+export const revivePet = async (id: string, petId: string) =>
+  unwrap(
+    await api.PATCH("/api/characters/{id}/pets/{petId}", {
+      params: { path: { id, petId } },
+      body: { status: "active" },
+    })
+  );
+
+export const addPet = async (
+  id: string,
+  body: { creature_id: string; source_id?: string; name?: string }
+) =>
+  unwrap(
+    await api.POST("/api/characters/{id}/pets", {
+      params: { path: { id } },
+      body,
+    })
+  );

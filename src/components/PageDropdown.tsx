@@ -1,13 +1,12 @@
 import { useState } from "react";
 import { Pressable, View } from "react-native";
 import { Text } from "@/components/Text";
-import { PAGES } from "@/lib/pages";
 import { C } from "@/lib/colors";
 import { usePageNav } from "@/lib/usePageNav";
 
 export function PageDropdown({ id }: { id: string }) {
   const [open, setOpen] = useState(false);
-  const { current, goTo } = usePageNav(id);
+  const { pages, current, goTo } = usePageNav(id);
 
   const go = (i: number) => {
     setOpen(false);
@@ -36,7 +35,7 @@ export function PageDropdown({ id }: { id: string }) {
 
       {open && (
         <View style={{ borderWidth: 1, borderColor: C.border, borderRadius: 8, marginTop: 4, backgroundColor: C.surface }}>
-          {PAGES.map((p, i) => (
+          {pages.map((p, i) => (
             <Pressable
               key={p.slug || "index"}
               onPress={() => go(i)}

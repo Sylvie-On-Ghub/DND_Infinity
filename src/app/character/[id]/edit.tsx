@@ -1,9 +1,10 @@
 import { useMutation, useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useLocalSearchParams } from "expo-router";
+import { router, useLocalSearchParams, type Href } from "expo-router";
 import { useState } from "react";
 import { ActivityIndicator, FlatList, Modal, Pressable, StyleSheet, View } from "react-native";
 import { Text, TextInput } from "@/components/Text";
 import { getCharacter, getContent, getSheet, levelUp, listContent, patchCharacter, setHp } from "@/lib/api/characters";
+import { AddPetModal } from "@/components/AddPetModal";
 import { ChoiceEditor } from "@/components/ChoiceEditor";
 import { LevelUpModal } from "@/components/LevelUpModal";
 import { Page } from "@/components/Page";
@@ -79,6 +80,7 @@ export default function EditPage() {
         character={character}
         sheet={sheet}
       />
+      <PetsSection id={id} sheet={sheet} />
 
       <View style={{ gap: 8 }}>
         <Text style={s.section}>Choices</Text>
@@ -230,6 +232,37 @@ function IdentitySection({ id, character }: { id: string; character: Character }
             </Pressable>
           </View>
         </Modal>
+      )}
+    </View>
+  );
+}
+
+function PetsSection({ id, sheet }: { id: string; sheet: Sheet }) {
+  const [adding, setAdding] = useState(false);
+  const pets = sheet.pets ?? [];
+  // Only a feature or spell that grants pets, such as Find Familiar, lets them add one.
+  const canAdd = (sheet.pet_sources ?? []).length > 0;
+  if (pets.length === 0 && !canAdd) return null;
+
+  return (
+    <View style={{ gap: 8 }}>
+      <Text style={s.section}>Pets</Text>
+      <View style={s.box}>
+        {pets.length === 0 && <Text style={s.muted}>No pets yet</Text>}
+        {pets.map((p) => (
+          <Text key={p.id} style={{ fontSize: 16 }}>
+            {p.name || p.creature_name}
+            {p.name && p.creature_name ? <Text style={s.muted}> ({p.creature_name})</Text> : null}
+          </Text>
+        ))}
+        {canAdd && <Btn label="Add pet" onPress={() => setAdding(true)} />}
+      </View>
+      {adding && (
+        <AddPetModal
+          id={id}
+          onClose={() => setAdding(false)}
+          onAdded={() => router.replace(`/character/${id}/pets` as Href)}
+        />
       )}
     </View>
   );
