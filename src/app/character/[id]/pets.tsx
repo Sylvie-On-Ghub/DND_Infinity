@@ -1,13 +1,13 @@
 import { useQuery } from "@tanstack/react-query";
 import { Redirect, useLocalSearchParams, type Href } from "expo-router";
 import { useState } from "react";
-import { ActivityIndicator, Pressable, StyleSheet, View } from "react-native";
+import { ActivityIndicator, FlatList, Modal, Pressable, StyleSheet, View } from "react-native";
 import { AddPetModal } from "@/components/AddPetModal";
 import { HpModal } from "@/components/HpModal";
 import { Page } from "@/components/Page";
 import { Text } from "@/components/Text";
-import { getSheet, revivePet } from "@/lib/api/characters";
-import type { PetView } from "@/lib/api/client";
+import { changePetForm, getSheet, setPetStatus } from "@/lib/api/characters";
+import type { PetSourceView, PetView } from "@/lib/api/client";
 import { useSheetAction } from "@/lib/api/useSheetAction";
 import { C } from "@/lib/colors";
 import { pretty, shortRange, signed } from "@/lib/format";
@@ -56,7 +56,12 @@ export default function PetsPage() {
   return (
     <Page>
       {pets.map((p) => (
-        <PetCard key={p.id} id={id} pet={p} />
+        <PetCard
+          key={p.id}
+          id={id}
+          pet={p}
+          source={sheet.pet_sources?.find((x) => x.source_id === p.source_id)}
+        />
       ))}
       {(sheet.pet_sources ?? []).length > 0 && (
         <Pressable style={s.button} onPress={() => setAdding(true)}>
@@ -68,10 +73,14 @@ export default function PetsPage() {
   );
 }
 
-function PetCard({ id, pet }: { id: string; pet: PetView }) {
+function PetCard({ id, pet, source }: { id: string; pet: PetView; source?: PetSourceView }) {
   const [hpOpen, setHpOpen] = useState(false);
-  const revive = useSheetAction(id);
+  const [changingForm, setChangingForm] = useState(false);
+  const status = useSheetAction(id);
   const dead = pet.status === "dead";
+  const dismissed = pet.status === "dismissed";
+  // Other forms the pet's source allows; none to offer if it has no source the character still has.
+  const forms = (source?.creatures ?? []).filter((cr) => cr.id !== pet.creature_id);
   const current = pet.current_hp ?? 0;
   const max = pet.max_hp ?? 0;
   const temp = pet.temp_hp ?? 0;
@@ -135,17 +144,35 @@ function PetCard({ id, pet }: { id: string; pet: PetView }) {
         </View>
       </View>
 
-      {dead && (
-        <View style={{ gap: 4 }}>
+      <View style={{ gap: 4 }}>
+        <View style={{ flexDirection: "row", gap: 8 }}>
+          {forms.length > 0 && (
+            <Pressable style={[s.button, s.secondary]} onPress={() => setChangingForm(true)}>
+              <Text style={{ fontWeight: "700" }}>Change form</Text>
+            </Pressable>
+          )}
           <Pressable
-            style={[s.button, revive.isPending && { opacity: 0.4 }]}
-            disabled={revive.isPending}
-            onPress={() => revive.mutate(() => revivePet(id, pet.id!))}
+            style={[s.button, { flex: 1 }, status.isPending && { opacity: 0.4 }]}
+            disabled={status.isPending}
+            onPress={() =>
+              status.mutate(() => setPetStatus(id, pet.id!, dead || dismissed ? "active" : "dismissed"))
+            }
           >
-            <Text style={{ color: C.onAccent, fontWeight: "700" }}>Revive at full HP</Text>
+            <Text style={{ color: C.onAccent, fontWeight: "700" }}>
+              {dead ? "Revive at full HP" : dismissed ? "Resummon" : "Dismiss"}
+            </Text>
           </Pressable>
-          {revive.error && <Text style={{ color: C.danger }}>{revive.error.message}</Text>}
         </View>
+        {status.error && <Text style={{ color: C.danger }}>{status.error.message}</Text>}
+      </View>
+
+      {changingForm && (
+        <FormModal
+          id={id}
+          pet={pet}
+          forms={forms}
+          onClose={() => setChangingForm(false)}
+        />
       )}
 
       {/* Abilities */}
@@ -231,6 +258,54 @@ function PetCard({ id, pet }: { id: string; pet: PetView }) {
   );
 }
 
+// Pick a new form for the pet, as when recasting Find Familiar.
+function FormModal({
+  id,
+  pet,
+  forms,
+  onClose,
+}: {
+  id: string;
+  pet: PetView;
+  forms: NonNullable<PetSourceView["creatures"]>;
+  onClose: () => void;
+}) {
+  const action = useSheetAction(id);
+
+  return (
+    <Modal visible animationType="slide" onRequestClose={onClose}>
+      <View style={{ flex: 1, padding: 16, paddingTop: 60, gap: 12, backgroundColor: C.bg }}>
+        <Text style={{ fontSize: 22, fontWeight: "700" }}>
+          Change {pet.name || pet.creature_name}&apos;s form
+        </Text>
+        <Text style={s.muted}>
+          It keeps its name. HP resets to the new form&apos;s maximum, and temp HP and conditions
+          clear.
+        </Text>
+        <FlatList
+          data={forms}
+          keyExtractor={(x) => x.id!}
+          renderItem={({ item }) => (
+            <Pressable
+              disabled={action.isPending}
+              onPress={() =>
+                action.mutate(() => changePetForm(id, pet.id!, item.id!), { onSuccess: onClose })
+              }
+              style={{ paddingVertical: 14, paddingHorizontal: 8, borderBottomWidth: 1, borderColor: C.divider }}
+            >
+              <Text style={{ fontSize: 17 }}>{item.name ?? pretty(item.id)}</Text>
+            </Pressable>
+          )}
+        />
+        {action.error && <Text style={{ color: C.danger }}>{action.error.message}</Text>}
+        <Pressable onPress={onClose} style={{ padding: 16, alignItems: "center" }}>
+          <Text style={{ color: C.accent, fontWeight: "600" }}>Cancel</Text>
+        </Pressable>
+      </View>
+    </Modal>
+  );
+}
+
 // A labelled row, left out when it has nothing to say.
 function Info({ label, text }: { label: string; text: string[] }) {
   if (text.length === 0) return null;
@@ -270,4 +345,5 @@ const s = StyleSheet.create({
   abilities: { flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between", rowGap: 10 },
   ability: { width: "32%", alignItems: "center", gap: 1 },
   button: { backgroundColor: C.accent, borderRadius: 8, paddingVertical: 12, alignItems: "center" },
+  secondary: { flex: 1, backgroundColor: C.fillStrong },
 });

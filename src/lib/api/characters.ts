@@ -309,11 +309,24 @@ export const petHp = async (
   );
 
 // Healing doesn't revive a dead pet; setting it back to active does, at full HP.
-export const revivePet = async (id: string, petId: string) =>
+export const setPetStatus = async (
+  id: string,
+  petId: string,
+  status: "active" | "dismissed"
+) =>
   unwrap(
     await api.PATCH("/api/characters/{id}/pets/{petId}", {
       params: { path: { id, petId } },
-      body: { status: "active" },
+      body: { status },
+    })
+  );
+
+// A new form, as when recasting Find Familiar: HP resets and temp HP and conditions clear.
+export const changePetForm = async (id: string, petId: string, creatureId: string) =>
+  unwrap(
+    await api.PATCH("/api/characters/{id}/pets/{petId}", {
+      params: { path: { id, petId } },
+      body: { creature_id: creatureId },
     })
   );
 
