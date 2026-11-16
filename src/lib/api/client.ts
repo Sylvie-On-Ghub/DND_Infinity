@@ -60,6 +60,8 @@ export type ResourceView = components["schemas"]["ResourceView"];
 export type PetView = components["schemas"]["PetView"];
 export type PetSourceView = components["schemas"]["PetSourceView"];
 export type FeatureView = NonNullable<Sheet["features"]>[number];
+export type FormView = components["schemas"]["FormView"];
+export type FormAction = components["schemas"]["FormAction"];
 
 export class ApiRequestError extends Error {
   constructor(

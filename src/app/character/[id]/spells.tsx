@@ -78,6 +78,11 @@ export default function SpellsPage() {
 
   return (
     <Page>
+      {sheet.shape && !sheet.shape.can_cast && (
+        <View style={s.notice}>
+          <Text>You can&apos;t cast spells while shaped as {sheet.shape.name ?? "a beast"}.</Text>
+        </View>
+      )}
       {sources.length > 1 && classSources.length > 0 && (
         <View style={s.chips}>
           <Chip label="All" active={!picked} onPress={() => setSourceId("all")} />
@@ -405,6 +410,7 @@ function Stat({ label, value }: { label: string; value: string }) {
 }
 
 const s = StyleSheet.create({
+  notice: { backgroundColor: C.warningSoft, padding: 12, borderRadius: 8 },
   box: { borderWidth: 1, borderColor: C.border, borderRadius: 12, padding: 10, backgroundColor: C.surface, gap: 4 },
   muted: { color: C.muted, fontSize: 13 },
   sub: { fontSize: 12, color: C.muted },

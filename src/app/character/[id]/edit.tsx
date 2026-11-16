@@ -3,12 +3,12 @@ import { router, useLocalSearchParams, type Href } from "expo-router";
 import { useState } from "react";
 import { ActivityIndicator, FlatList, Modal, Pressable, StyleSheet, View } from "react-native";
 import { Text, TextInput } from "@/components/Text";
-import { getCharacter, getContent, getSheet, levelUp, listContent, patchCharacter, setHp } from "@/lib/api/characters";
+import { getCharacter, getContent, getSheet, levelUp, listContent, patchCharacter, removeSelection, setHp } from "@/lib/api/characters";
 import { AddPetModal } from "@/components/AddPetModal";
 import { ChoiceEditor } from "@/components/ChoiceEditor";
 import { LevelUpModal } from "@/components/LevelUpModal";
 import { Page } from "@/components/Page";
-import type { Character, Sheet } from "@/lib/api/client";
+import type { Character, FeatureView, PendingChoice, Selection, Sheet } from "@/lib/api/client";
 import { useCharacterPatch } from "@/lib/api/useCharacterPatch";
 import { useSheetAction } from "@/lib/api/useSheetAction";
 import { pretty } from "@/lib/format";
@@ -47,6 +47,9 @@ export default function EditPage() {
 
   const pending = sheet.pending_choices ?? [];
   const made = character.selections ?? [];
+  const groups = groupChoices(sheet, character, pending, made);
+  const features = new Map((sheet.features ?? []).map((f) => [f.feature_id, f]));
+  const featureName = (featureId?: string) => features.get(featureId)?.name ?? pretty(featureId);
 
   return (
     <Page>
@@ -84,72 +87,77 @@ export default function EditPage() {
 
       <View style={{ gap: 8 }}>
         <Text style={s.section}>Choices</Text>
+        <Text style={s.muted}>Grouped by the level they are gained at. Tap one to make, change or remove it.</Text>
 
-        <Text style={s.sub}>Pending</Text>
-        <View style={s.box}>
-          {pending.length === 0 && <Text style={s.muted}>Nothing pending</Text>}
-          {pending.some((p) => p.feature_id === "character") && (
-  <Text style={s.muted}>
-    Race or background still to pick: use Race & Background at the top of this page.
-  </Text>
-)}
-{pending
-  .filter((p) => p.feature_id !== "character")
-  .map((p) => (
-    <Pressable
-      key={`${p.feature_id}:${p.choice_id}`}
-      style={s.listRow}
-      onPress={() =>
-        setEditing({
-          featureId: p.feature_id!,
-          choiceId: p.choice_id!,
-          title: p.prompt ?? "Choice",
-          expected: p.remaining,
-        })
-      }
-    >
-      <Text style={s.link}>
-        {p.prompt} ({p.remaining} left)
-      </Text>
-    </Pressable>
-  ))}
-        </View>
+        {pending.some((p) => p.feature_id === "character") && (
+          <Text style={s.muted}>
+            Race or background still to pick: use Race & Background at the top of this page.
+          </Text>
+        )}
+        {groups.length === 0 && (
+          <View style={s.box}>
+            <Text style={s.muted}>No choices yet</Text>
+          </View>
+        )}
 
-        <Text style={s.sub}>Made (tap to change or remove)</Text>
-        <View style={s.box}>
-          {made.length === 0 && <Text style={s.muted}>No choices made yet</Text>}
-          {made.map((m) => {
-            const total = m.allocated
-              ? Object.values(m.allocated).reduce((a, b) => a + b, 0)
-              : m.picked?.length;
-            const summary = m.allocated
-              ? Object.entries(m.allocated)
-                  .map(([k, v]) => `${pretty(k)} +${v}`)
-                  .join(", ")
-              : (m.picked ?? []).map(pretty).join(", ");
-            return (
-              <Pressable
-                key={`${m.feature_id}:${m.choice_id}`}
-                style={s.listRow}
-                onPress={() =>
-                  setEditing({
-                    featureId: m.feature_id!,
-                    choiceId: m.choice_id!,
-                    title: `${pretty(m.feature_id)} › ${pretty(m.choice_id)}`,
-                    expected: total,
-                    picked: m.allocated ? undefined : m.picked ?? [],
-                    allocated: m.allocated,
-                  })
-                }
-              >
-                <Text style={{ fontWeight: "600" }}>
-                  {pretty(m.feature_id)} › {pretty(m.choice_id)}
-                </Text>
-                <Text style={s.muted}>{summary || "(empty)"}</Text>
-              </Pressable>
-            );
-          })}
-        </View>
+        {groups.map((g) => (
+          <View key={g.key} style={{ gap: 4 }}>
+            <View style={s.inline}>
+              <Text style={[s.sub, { flex: 1 }]}>{g.title}</Text>
+              {g.pending.length > 0 && <Text style={s.badge}>{g.pending.length} to choose</Text>}
+            </View>
+            <View style={s.box}>
+              {g.pending.map((p) => (
+                <Pressable
+                  key={`${p.feature_id}:${p.choice_id}`}
+                  style={s.listRow}
+                  onPress={() =>
+                    setEditing({
+                      featureId: p.feature_id!,
+                      choiceId: p.choice_id!,
+                      title: p.prompt ?? "Choice",
+                      expected: p.remaining,
+                    })
+                  }
+                >
+                  <Text style={s.link}>
+                    {p.prompt} ({p.remaining} left)
+                  </Text>
+                </Pressable>
+              ))}
+              {g.made.map((m) => {
+                const total = m.allocated
+                  ? Object.values(m.allocated).reduce((a, b) => a + b, 0)
+                  : m.picked?.length;
+                const summary = m.allocated
+                  ? Object.entries(m.allocated)
+                      .map(([k, v]) => `${pretty(k)} +${v}`)
+                      .join(", ")
+                  : (m.picked ?? []).map(pretty).join(", ");
+                const title = `${featureName(m.feature_id)} › ${pretty(m.choice_id)}`;
+                return (
+                  <Pressable
+                    key={`${m.feature_id}:${m.choice_id}`}
+                    style={s.listRow}
+                    onPress={() =>
+                      setEditing({
+                        featureId: m.feature_id!,
+                        choiceId: m.choice_id!,
+                        title,
+                        expected: total,
+                        picked: m.allocated ? undefined : m.picked ?? [],
+                        allocated: m.allocated,
+                      })
+                    }
+                  >
+                    <Text style={{ fontWeight: "600" }}>{title}</Text>
+                    <Text style={s.muted}>{summary || "(empty)"}</Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+          </View>
+        ))}
       </View>
 
       {editing && (
@@ -167,6 +175,65 @@ export default function EditPage() {
       )}
     </Page>
   );
+}
+
+type ChoiceGroup = {
+  key: string;
+  title: string;
+  order: number;
+  pending: PendingChoice[];
+  made: Selection[];
+};
+
+// The class feature a feature was gained through: itself if it has a class level, or else the
+// nearest one up its granted_by chain (a feat picked from a level 4 ASI belongs to level 4).
+function classFeatureOf(sheet: Sheet, featureId?: string) {
+  const byId = new Map<string, FeatureView>();
+  (sheet.features ?? []).forEach((f) => f.feature_id && byId.set(f.feature_id, f));
+  const seen = new Set<string>();
+  let f = featureId ? byId.get(featureId) : undefined;
+  while (f && f.level === undefined && f.granted_by && !seen.has(f.granted_by)) {
+    seen.add(f.granted_by);
+    f = byId.get(f.granted_by);
+  }
+  return f?.level !== undefined ? f : undefined;
+}
+
+// Puts each choice under the class level it's gained at. Choices and selections don't carry a
+// level, so it comes from the feature they belong to.
+function groupChoices(sheet: Sheet, character: Character, pending: PendingChoice[], made: Selection[]) {
+  const classIds = (character.classes ?? []).map((c) => c.class_id);
+  const multiclass = classIds.length > 1;
+
+  const placeOf = (featureId?: string): Omit<ChoiceGroup, "pending" | "made"> => {
+    const origin = sheet.features?.find((x) => x.feature_id === featureId);
+    const f = classFeatureOf(sheet, featureId);
+    if (f?.level !== undefined) {
+      const ci = classIds.indexOf(f.source_id);
+      const order = (ci < 0 ? classIds.length : ci) * 100 + f.level;
+      return {
+        key: `${f.source_id}:${f.level}`,
+        title: multiclass ? `${pretty(f.source_id)} level ${f.level}` : `Level ${f.level}`,
+        order,
+      };
+    }
+    if (origin?.source === "race" || origin?.source === "background") {
+      return { key: "origin", title: "Race & background", order: -1 };
+    }
+    // Feats with no class level, and selections whose feature is no longer granted.
+    return { key: "other", title: "Other", order: Number.MAX_SAFE_INTEGER };
+  };
+
+  const groups = new Map<string, ChoiceGroup>();
+  const groupFor = (featureId?: string) => {
+    const place = placeOf(featureId);
+    let g = groups.get(place.key);
+    if (!g) groups.set(place.key, (g = { ...place, pending: [], made: [] }));
+    return g;
+  };
+  pending.filter((p) => p.feature_id !== "character").forEach((p) => groupFor(p.feature_id).pending.push(p));
+  made.forEach((m) => groupFor(m.feature_id).made.push(m));
+  return [...groups.values()].sort((a, b) => a.order - b.order);
 }
 
 function IdentitySection({ id, character }: { id: string; character: Character }) {
@@ -319,6 +386,33 @@ function LevelSection({ id, character, sheet }: { id: string; character: Charact
     },
   });
 
+  const [removing, setRemoving] = useState<number | null>(null);
+  const removingClass = removing === null ? undefined : classes[removing];
+  // Choices on features this class granted, which would otherwise be left behind.
+  const choicesOfClass = (classId?: string) =>
+    (character.selections ?? []).filter(
+      (sel) => classFeatureOf(sheet, sel.feature_id)?.source_id === classId
+    );
+  const removingChoices = choicesOfClass(removingClass?.class_id);
+
+  const removeClass = useMutation({
+    mutationFn: async (index: number) => {
+      const choices = choicesOfClass(classes[index].class_id);
+      // `classes` is replaced whole, so send every class but this one.
+      await patchCharacter(id, { classes: classes.filter((_, i) => i !== index) });
+      for (const sel of choices) {
+        await removeSelection(id, sel.feature_id!, sel.choice_id!);
+      }
+    },
+    onSuccess: () => setRemoving(null),
+    // Also on failure: the class may be gone even if clearing a choice failed.
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ["sheet", id] });
+      queryClient.invalidateQueries({ queryKey: ["character", id] });
+      queryClient.invalidateQueries({ queryKey: ["characters"] });
+    },
+  });
+
   const setDraft = (i: number, v: string) => setDrafts((p) => p.map((x, j) => (j === i ? v : x)));
   const step = (i: number, d: number) =>
     setDraft(i, String(Math.max(1, Math.min(20, (parseInt(drafts[i], 10) || 1) + d))));
@@ -364,8 +458,43 @@ function LevelSection({ id, character, sheet }: { id: string; character: Charact
             <Pressable style={s.step} onPress={() => step(i, 1)}>
               <Text style={s.stepText}>+</Text>
             </Pressable>
+            <Pressable
+              style={s.step}
+              accessibilityLabel={`Remove ${pretty(c.class_id)}`}
+              onPress={() => {
+                removeClass.reset();
+                setRemoving(i);
+              }}
+            >
+              <Text style={[s.stepText, { color: C.danger }]}>✕</Text>
+            </Pressable>
           </View>
         ))}
+
+        {removingClass && (
+          <View style={s.confirm}>
+            <Text style={{ fontWeight: "700", fontSize: 16 }}>Remove {pretty(removingClass.class_id)}?</Text>
+            <Text style={s.muted}>
+              This takes away all {removingClass.level} {pretty(removingClass.class_id)} level(s), their HP
+              and subclass, and the choices made on its features.
+              {removingChoices.length > 0 ? ` That clears ${removingChoices.length} choice(s).` : ""}
+            </Text>
+            <View style={[s.inline, { marginTop: 6 }]}>
+              <View style={{ flex: 1 }}>
+                <Btn label="Cancel" color={C.fillStrong} disabled={removeClass.isPending} onPress={() => setRemoving(null)} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Btn
+                  label={removeClass.isPending ? "Removing…" : "Remove"}
+                  color={C.danger}
+                  disabled={removeClass.isPending}
+                  onPress={() => removeClass.mutate(removing!)}
+                />
+              </View>
+            </View>
+            {removeClass.error && <Text style={s.err}>{removeClass.error.message}</Text>}
+          </View>
+        )}
 
         {anyUp && (
           <View style={{ marginTop: 12, gap: 6 }}>
@@ -395,7 +524,7 @@ function LevelSection({ id, character, sheet }: { id: string; character: Charact
 
         {anyDown && (
           <Text style={[s.muted, { marginTop: 8, color: C.warning }]}>
-            Lowering a level drops that level's HP entry. Choices made at the removed levels
+            Lowering a level drops the HP entry for that level. Choices made at the removed levels
             are not removed automatically, so check Choices below.
           </Text>
         )}
@@ -670,12 +799,12 @@ function AbilitySection({ id, character, sheet }: { id: string; character: Chara
   );
 }
 
-function Btn({ label, disabled, onPress }: { label: string; disabled?: boolean; onPress: () => void }) {
+function Btn({ label, color = C.accent, disabled, onPress }: { label: string; color?: string; disabled?: boolean; onPress: () => void }) {
   return (
     <Pressable
       onPress={onPress}
       disabled={disabled}
-      style={{ backgroundColor: C.accent, opacity: disabled ? 0.4 : 1, paddingHorizontal: 16, paddingVertical: 10, borderRadius: 8, alignItems: "center" }}
+      style={{ backgroundColor: color, opacity: disabled ? 0.4 : 1, paddingHorizontal: 16, paddingVertical: 10, borderRadius: 8, alignItems: "center" }}
     >
       <Text style={{ color: C.onAccent, fontWeight: "700" }}>{label}</Text>
     </Pressable>
@@ -689,6 +818,8 @@ const s = StyleSheet.create({
   muted: { color: C.muted, fontSize: 13 },
   err: { color: C.danger },
   link: { color: C.accent, fontSize: 16 },
+  badge: { color: C.accent, fontSize: 13, fontWeight: "600" },
+  confirm: { marginTop: 8, padding: 10, borderRadius: 8, borderWidth: 1, borderColor: C.danger, gap: 4 },
   listRow: { paddingVertical: 8, borderBottomWidth: StyleSheet.hairlineWidth, borderColor: C.border },
   inline: { flexDirection: "row", alignItems: "center", gap: 8 },
   input: { borderWidth: 1, borderColor: C.border, borderRadius: 8, paddingHorizontal: 10, paddingVertical: 8, fontSize: 16, textAlign: "center", backgroundColor: C.surface, minWidth: 60 },
