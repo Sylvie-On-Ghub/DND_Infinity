@@ -1,6 +1,6 @@
 import { api, ApiRequestError, unwrap } from "./client";
 import { forgetVersion, getVersion } from "./versions";
-import type { AddItemRequest, Character, CoinsAction, EntryPatch } from "./client";
+import type { AddItemRequest, Character, CoinsAction, EntryPatch, FormAction } from "./client";
 
 export const listCharacters = async () =>
   unwrap(await api.GET("/api/characters"));
@@ -227,6 +227,15 @@ export const changeConditions = async (
 ) =>
   unwrap(
     await api.POST("/api/characters/{id}/conditions", {
+      params: { path: { id } },
+      body,
+    })
+  );
+
+// Start or end a temporary form such as Rage. Send exactly one of `start` or `end`.
+export const changeForms = async (id: string, body: FormAction) =>
+  unwrap(
+    await api.POST("/api/characters/{id}/forms", {
       params: { path: { id } },
       body,
     })

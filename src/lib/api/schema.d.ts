@@ -198,6 +198,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/characters/{id}/forms": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Start or end a form
+         * @description For temporary states such as Rage, listed on the sheet's `forms`. Send exactly one of `start` or `end` (a form id). Starting spends a use of the form's resource unless `free` is true, and fails with 409 `no_uses` when none are left. Fill each of the form's `choices` in `picks` (choice id to option ids). Ending a form that isn't active does nothing, and nothing is refunded. To change picks, end the form and start it again with `free: true`. A long rest ends every form.
+         */
+        post: operations["changeForms"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/characters/{id}/hp": {
         parameters: {
             query?: never;
@@ -434,7 +454,7 @@ export interface paths {
         put?: never;
         /**
          * Take a short or long rest
-         * @description Short: pact slots and short-rest resources come back. Long: also HP to max, temp HP cleared, all spell slots back, long-rest and dawn resources back, half your hit dice back (at least 1), death saves cleared, concentration ends, exhaustion drops by 1. Spending hit dice during a short rest is not automated.
+         * @description Short: pact slots and short-rest resources come back. Long: also HP to max, temp HP cleared, all spell slots back, long-rest and dawn resources back, half your hit dice back (at least 1), death saves cleared, concentration ends, exhaustion drops by 1, active forms end. Spending hit dice during a short rest is not automated.
          */
         post: operations["rest"];
         delete?: never;
@@ -672,6 +692,8 @@ export interface components {
             total?: number;
         };
         ACFormula: {
+            /** @description The form this AC formula belongs to. It is offered only while that form is active (Circle Forms during Wild Shape). */
+            form?: string;
             formula?: components["schemas"]["Formula"];
             id?: string;
             name?: string;
@@ -726,6 +748,14 @@ export interface components {
             pet_id?: string;
             removed?: boolean;
             sheet?: components["schemas"]["Sheet"];
+        };
+        ActiveForm: {
+            /** @description Shape forms only: the creature the character has become. Set by starting the form with a creature_id. */
+            creature_id?: string;
+            id?: string;
+            picks?: {
+                [key: string]: string[];
+            };
         };
         AddItemRequest: {
             container?: string;
@@ -794,6 +824,8 @@ export interface components {
             ac_formula_override?: string;
             /** @description Warnings the user has marked as intentional, matched by key. */
             acknowledgements?: components["schemas"]["Acknowledgement"][];
+            /** @description Forms that are switched on, with the picks made at activation. Normally changed through POST /api/characters/{id}/forms rather than written directly. A long rest clears it. */
+            active_forms?: components["schemas"]["ActiveForm"][];
             armour_profs?: string[];
             /** @description A feature tagged background. List them at /api/content/backgrounds and set this with PATCH. */
             background_id?: string;
@@ -1010,6 +1042,10 @@ export interface components {
             actions?: components["schemas"]["Action"][];
             choices?: components["schemas"]["Choice"][];
             description?: string;
+            /** @description A form this feature lets the character switch on. Its resource, if any, is spent when the form starts. */
+            form?: components["schemas"]["FormDef"];
+            /** @description Picks offered when a form is switched on, added to a form declared by this or another feature (Rage's Wild Heart animal). */
+            form_choices?: components["schemas"]["FormChoice"][];
             grants?: components["schemas"]["Grants"];
             id?: string;
             level_gained?: number;
@@ -1045,6 +1081,60 @@ export interface components {
             source?: "class" | "race" | "background" | "feat" | "item" | "other";
             /** @description The class, race or background it belongs to. A feat with no source of its own gives its own id. */
             source_id?: string;
+        };
+        FormAction: {
+            end?: string;
+            start?: components["schemas"]["FormStart"];
+        };
+        FormChoice: {
+            count?: number;
+            filter?: components["schemas"]["PoolFilter"];
+            form?: string;
+            /** @enum {string} */
+            grant_level?: "none" | "half" | "trained" | "expert";
+            group?: string;
+            id?: string;
+            /** @enum {string} */
+            kind?: "pick" | "allocate";
+            max_per_option?: number;
+            options?: components["schemas"]["Option"][];
+            points?: number;
+            prompt?: string;
+        };
+        FormDef: {
+            id?: string;
+            name?: string;
+            no_cost?: boolean;
+            shape?: components["schemas"]["ShapeDef"];
+        };
+        FormStart: {
+            /** @description Shape forms (Wild Shape): the Known Form to become, from the form's known_forms. Required for a shape form and refused on any other. A creature that isn't known, or isn't eligible now, is a 400. Starting a shape form that is already active changes the beast: it spends a use unless free is set, and temp HP is re-applied. */
+            creature_id?: string;
+            free?: boolean;
+            id?: string;
+            picks?: {
+                [key: string]: string[];
+            };
+        };
+        FormView: {
+            active?: boolean;
+            choices?: components["schemas"]["Choice"][];
+            feature_id?: string;
+            /** @description Shape forms only: whether creatures with a fly speed are allowed now. */
+            fly_allowed?: boolean;
+            id?: string;
+            /** @description Shape forms only: the character's Known Forms in the order they were picked, each with whether it can be taken now and, if not, why. */
+            known_forms?: components["schemas"]["ShapeOption"][];
+            /** @description Shape forms only: the highest creature CR the form allows now, as a CR string ("1/2"). Set only on shape forms. */
+            max_cr?: string;
+            name?: string;
+            picks?: {
+                [key: string]: string[];
+            };
+            resource_id?: string;
+            /** @description Shape forms only: the temp HP starting the form grants, after any shape.temp_hp modifier. Starting it sets temp HP to the higher of the current value and this. */
+            temp_hp?: number;
+            uses_left?: number;
         };
         Formula: {
             base?: number;
@@ -1170,6 +1260,8 @@ export interface components {
             condition?: string;
             /** @description Makes this a dice rider (for example 1d6 Sneak Attack), shown on attacks rather than added into numbers. */
             dice?: string;
+            /** @description In content: the form this modifier belongs to. It applies only while that form is active; otherwise it shows as a situational note, "while <Name> is active". Never on the sheet. */
+            form?: string;
             /** @enum {string} */
             kind?: "add" | "set" | "min" | "multiply" | "advantage" | "disadvantage" | "note";
             note?: string;
@@ -1183,6 +1275,8 @@ export interface components {
              * @enum {string}
              */
             value_ability?: "str" | "dex" | "con" | "int" | "wis" | "cha";
+            /** @description Works the value out from a formula ("three times your Druid level") instead of a fixed number. Overrides value. */
+            value_formula?: components["schemas"]["Formula"];
             /**
              * @description Uses this speed as the value, for example a swimming speed equal to your walking speed. Pair it with kind min.
              * @enum {string}
@@ -1370,6 +1464,34 @@ export interface components {
             expires_at?: string;
             token?: string;
         };
+        ShapeDef: {
+            class_id?: string;
+            creature_tag?: string;
+            limits?: components["schemas"]["ShapeLimit"][];
+            temp_hp?: components["schemas"]["Formula"];
+        };
+        ShapeLimit: {
+            fly?: boolean;
+            known?: number;
+            max_cr?: string;
+            min_level?: number;
+        };
+        ShapeOption: {
+            cr?: string;
+            eligible?: boolean;
+            id?: string;
+            name?: string;
+            reason?: string;
+        };
+        ShapeView: {
+            can_cast?: boolean;
+            cr?: string;
+            creature_id?: string;
+            form_id?: string;
+            name?: string;
+            size?: string;
+            traits?: components["schemas"]["Trait"][];
+        };
         /** @description Everything the rules engine computes for a character. Never stored; recomputed on every request. */
         Sheet: {
             abilities?: {
@@ -1391,6 +1513,8 @@ export interface components {
             caster_level?: number;
             /** @description Every feature the character has, from classes, subclasses, race, background, feats and choices, in the order they resolved. The race and background themselves are listed too. */
             features?: components["schemas"]["FeatureView"][];
+            /** @description Forms the character can switch on (Rage, Bladesong), each with whether it is active, the uses left and the picks offered when it is activated. Start and end them with POST /api/characters/{id}/forms. */
+            forms?: components["schemas"]["FormView"][];
             immunities?: string[];
             initiative?: number;
             /** @description Resolved inventory entries with names, weights, costs and containers. */
@@ -1413,6 +1537,8 @@ export interface components {
             /** @description Limited-use feature resources with uses spent. */
             resources?: components["schemas"]["ResourceView"][];
             senses?: components["schemas"]["Sense"][];
+            /** @description Present while a shape form (Wild Shape) is active: the creature the character has become. The sheet's AC, Strength, Dexterity and Constitution, speeds and attacks are that creature's; the character keeps their own Intelligence, Wisdom and Charisma, their speed bonuses other than their species', and their proficiency bonus, saves and skills where they are higher. */
+            shape?: components["schemas"]["ShapeView"];
             short_rest_exhaustion?: number;
             skills?: {
                 [key: string]: components["schemas"]["SkillView"];
@@ -2399,6 +2525,81 @@ export interface operations {
             };
             /** @description Not found: no such character, inventory entry, pet, feature or content. */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    changeForms: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A character id (letters, digits, - and _), or a content id on the content routes. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                /**
+                 * @example {
+                 *       "start": {
+                 *         "id": "rage",
+                 *         "picks": {
+                 *           "rage_of_the_wilds": [
+                 *             "bear"
+                 *           ]
+                 *         }
+                 *       }
+                 *     }
+                 */
+                "application/json": components["schemas"]["FormAction"];
+            };
+        };
+        responses: {
+            /** @description The updated sheet. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ActionResponse"];
+                };
+            };
+            /** @description Bad request: malformed JSON, an unknown field, an invalid id, or a request that can't be carried out. Rules problems are never errors; they come back as warnings on the sheet. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Sign in required: the bearer token is missing, unknown or expired. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not found: no such character, inventory entry, pet, feature or content. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `already_exists`: you already have a character with that id. `version_conflict`: the character has changed since you read it, so fetch it again and retry. */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };

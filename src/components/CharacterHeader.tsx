@@ -8,6 +8,7 @@ import { getCharacter, getSheet, listContent } from "@/lib/api/characters";
 import { AcModal } from "./AcModal";
 import { CharacterModal } from "./CharacterModal";
 import { ConditionsModal } from "./ConditionsModal";
+import { FormsModal } from "./FormsModal";
 import { HpModal } from "./HpModal";
 import { InspirationModal } from "./InspirationModal";
 import { Portrait } from "./Portrait";
@@ -28,6 +29,7 @@ export function CharacterHeader({ id }: { id: string }) {
   const [portraitOpen, setPortraitOpen] = useState(false);
   const [inspirationOpen, setInspirationOpen] = useState(false);
   const [conditionsOpen, setConditionsOpen] = useState(false);
+  const [formsOpen, setFormsOpen] = useState(false);
   const [characterOpen, setCharacterOpen] = useState(false);
 
   // Same query keys as the screens below, so the cache is shared.
@@ -55,6 +57,12 @@ export function CharacterHeader({ id }: { id: string }) {
   ].filter(Boolean);
   const inspiration = character?.inspiration ?? 0;
   const portrait = character?.portrait_url;
+  const forms = sheet?.forms ?? [];
+  const shape = sheet?.shape;
+  // While shaped, name the beast too ("Wild Shape: Wolf").
+  const activeForms = forms
+    .filter((f) => f.active)
+    .map((f) => (shape?.form_id === f.id && shape?.name ? `${f.name}: ${shape.name}` : f.name));
 
   return (
     <View style={[styles.wrap, { paddingTop: insets.top + 8 }]}>
@@ -108,10 +116,20 @@ export function CharacterHeader({ id }: { id: string }) {
             <Box label="Initiative" value={signed(sheet?.initiative)} />
             <Box
               label="Inspiration"
-              value={inspiration > 0 ? "●".repeat(inspiration) : "–"}
-              grow
+              value={inspiration > 1 ? `● ${inspiration}` : inspiration > 0 ? "●" : "–"}
+              grow={forms.length === 0}
               onPress={() => setInspirationOpen(true)}
             />
+            {/* Only for characters with something to switch on, like Rage or Wild Shape. */}
+            {forms.length > 0 && (
+              <Box
+                label="Forms"
+                value={activeForms.length ? activeForms.join(", ") : "None"}
+                grow
+                active={activeForms.length > 0}
+                onPress={() => setFormsOpen(true)}
+              />
+            )}
             <Pressable style={[styles.box, styles.rest]} onPress={() => setRestOpen(true)}>
               <Text style={styles.value}>Rest</Text>
             </Pressable>
@@ -143,6 +161,7 @@ export function CharacterHeader({ id }: { id: string }) {
           exhaustion={exhaustion}
         />
       )}
+      {formsOpen && <FormsModal id={id} onClose={() => setFormsOpen(false)} forms={forms} shape={shape} />}
       {/* Mounted only while open, so the inputs start fresh each time. */}
       {characterOpen && character && (
         <CharacterModal
@@ -168,15 +187,21 @@ function Box({
   label,
   value,
   grow,
+  active,
   onPress,
 }: {
   label: string;
   value: string;
   grow?: boolean;
+  active?: boolean;
   onPress?: () => void;
 }) {
   return (
-    <Pressable disabled={!onPress} onPress={onPress} style={[styles.box, grow && { flex: 1 }]}>
+    <Pressable
+      disabled={!onPress}
+      onPress={onPress}
+      style={[styles.box, grow && { flex: 1 }, active && styles.active]}
+    >
       <Text style={styles.label}>{label}</Text>
       <Text style={styles.value} numberOfLines={1}>
         {value}
@@ -203,4 +228,5 @@ const styles = StyleSheet.create({
   fill: { height: 8, backgroundColor: C.danger },
   hpText: { fontSize: 13, fontWeight: "700" },
   rest: { backgroundColor: C.accentSoft, alignItems: "center" },
+  active: { backgroundColor: C.accentSoft, borderColor: C.accent },
 });
