@@ -5,8 +5,8 @@ import { ActivityIndicator, FlatList, Modal, Pressable, StyleSheet, View } from 
 import { AddPetModal } from "@/components/AddPetModal";
 import { HpModal } from "@/components/HpModal";
 import { Page } from "@/components/Page";
-import { Text } from "@/components/Text";
-import { changePetForm, getSheet, setPetStatus } from "@/lib/api/characters";
+import { Text, TextInput } from "@/components/Text";
+import { changePetForm, getSheet, setPetName, setPetStatus } from "@/lib/api/characters";
 import type { PetSourceView, PetView } from "@/lib/api/client";
 import { useSheetAction } from "@/lib/api/useSheetAction";
 import { C } from "@/lib/colors";
@@ -76,6 +76,7 @@ export default function PetsPage() {
 function PetCard({ id, pet, source }: { id: string; pet: PetView; source?: PetSourceView }) {
   const [hpOpen, setHpOpen] = useState(false);
   const [changingForm, setChangingForm] = useState(false);
+  const [renaming, setRenaming] = useState(false);
   const status = useSheetAction(id);
   const dead = pet.status === "dead";
   const dismissed = pet.status === "dismissed";
@@ -103,7 +104,14 @@ function PetCard({ id, pet, source }: { id: string; pet: PetView; source?: PetSo
       {/* Name, creature and status */}
       <View>
         <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-          <Text style={[s.section, { flexShrink: 1 }]}>{pet.name || pet.creature_name}</Text>
+          <Pressable
+            style={{ flexDirection: "row", alignItems: "center", gap: 8, flexShrink: 1 }}
+            onPress={() => setRenaming(true)}
+            accessibilityLabel={`Rename ${pet.name || pet.creature_name}`}
+          >
+            <Text style={[s.section, { flexShrink: 1 }]}>{pet.name || pet.creature_name}</Text>
+            <Text style={{ color: C.accent, fontSize: 18 }}>✎</Text>
+          </Pressable>
           {pet.status && pet.status !== "active" && (
             <View style={[s.badge, dead && { borderColor: C.danger }]}>
               <Text style={{ fontSize: 13, fontWeight: "700", color: dead ? C.danger : C.muted }}>
@@ -174,6 +182,8 @@ function PetCard({ id, pet, source }: { id: string; pet: PetView; source?: PetSo
           onClose={() => setChangingForm(false)}
         />
       )}
+
+      {renaming && <NameModal id={id} pet={pet} onClose={() => setRenaming(false)} />}
 
       {/* Abilities */}
       <View style={[s.box, s.abilities]}>
@@ -306,6 +316,55 @@ function FormModal({
   );
 }
 
+// Set or clear the pet's nickname. Without one it goes by its creature's name.
+function NameModal({ id, pet, onClose }: { id: string; pet: PetView; onClose: () => void }) {
+  const action = useSheetAction(id);
+  const [draft, setDraft] = useState(pet.name ?? "");
+  const trimmed = draft.trim();
+  const save = (name: string) =>
+    action.mutate(() => setPetName(id, pet.id!, name), { onSuccess: onClose });
+
+  return (
+    <Modal visible transparent animationType="fade" onRequestClose={onClose}>
+      {/* Backdrop: tap outside to dismiss. Card sits near the top so the keyboard won't cover it. */}
+      <Pressable
+        onPress={onClose}
+        style={{ flex: 1, backgroundColor: C.backdrop, paddingTop: 110, paddingHorizontal: 24 }}
+      >
+        <Pressable onPress={() => {}} style={[s.box, { padding: 16, gap: 12 }]}>
+          <Text style={{ fontSize: 20, fontWeight: "700" }}>Nickname</Text>
+          <TextInput
+            value={draft}
+            onChangeText={setDraft}
+            placeholder={pet.creature_name ?? "Nickname"}
+            autoFocus
+            autoCorrect={false}
+            returnKeyType="done"
+            onSubmitEditing={() => trimmed !== (pet.name ?? "") && save(trimmed)}
+            style={s.input}
+          />
+          <Text style={s.muted}>Leave it blank to go by {pet.creature_name ?? "its creature name"}.</Text>
+          <View style={{ flexDirection: "row", gap: 8 }}>
+            <Pressable style={[s.button, s.secondary]} onPress={onClose} disabled={action.isPending}>
+              <Text style={{ fontWeight: "700" }}>Cancel</Text>
+            </Pressable>
+            <Pressable
+              style={[s.button, { flex: 1 }, (action.isPending || trimmed === (pet.name ?? "")) && { opacity: 0.4 }]}
+              disabled={action.isPending || trimmed === (pet.name ?? "")}
+              onPress={() => save(trimmed)}
+            >
+              <Text style={{ color: C.onAccent, fontWeight: "700" }}>
+                {action.isPending ? "Saving…" : "Save"}
+              </Text>
+            </Pressable>
+          </View>
+          {action.error && <Text style={{ color: C.danger }}>{action.error.message}</Text>}
+        </Pressable>
+      </Pressable>
+    </Modal>
+  );
+}
+
 // A labelled row, left out when it has nothing to say.
 function Info({ label, text }: { label: string; text: string[] }) {
   if (text.length === 0) return null;
@@ -346,4 +405,5 @@ const s = StyleSheet.create({
   ability: { width: "32%", alignItems: "center", gap: 1 },
   button: { backgroundColor: C.accent, borderRadius: 8, paddingVertical: 12, alignItems: "center" },
   secondary: { flex: 1, backgroundColor: C.fillStrong },
+  input: { borderWidth: 1, borderColor: C.border, borderRadius: 8, paddingHorizontal: 10, paddingVertical: 10, fontSize: 16, backgroundColor: C.bg },
 });
