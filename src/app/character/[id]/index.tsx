@@ -43,7 +43,8 @@ export default function AbilitiesPage() {
     );
   }
 
-  const notes = sheet.notes ?? [];
+  // Only saving throw modifiers belong beside the save boxes: save.str ... save.all and save.death.
+  const notes = (sheet.notes ?? []).filter((m) => m.target?.startsWith("save."));
   const senses = sheet.senses ?? [];
 
   return (
@@ -55,7 +56,7 @@ export default function AbilitiesPage() {
         ))}
       </View>
 
-      {/* Situational modifiers */}
+      {/* Situational saving throw modifiers */}
       {notes.length > 0 && (
         <View style={s.box}>
           {notes.map((m, i) => (

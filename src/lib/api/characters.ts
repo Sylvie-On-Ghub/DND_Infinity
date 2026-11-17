@@ -331,6 +331,15 @@ export const setPetStatus = async (
   );
 
 // A new form, as when recasting Find Familiar: HP resets and temp HP and conditions clear.
+// An empty name clears the nickname, so the pet goes back to its creature's name.
+export const setPetName = async (id: string, petId: string, name: string) =>
+  unwrap(
+    await api.PATCH("/api/characters/{id}/pets/{petId}", {
+      params: { path: { id, petId } },
+      body: { name },
+    })
+  );
+
 export const changePetForm = async (id: string, petId: string, creatureId: string) =>
   unwrap(
     await api.PATCH("/api/characters/{id}/pets/{petId}", {
