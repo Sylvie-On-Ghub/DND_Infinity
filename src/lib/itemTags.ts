@@ -6,6 +6,9 @@ import type { InventoryView } from "@/lib/api/client";
 // Same rules as the server, so a bad tag is caught before it's sent.
 const BONUS_TAG = /^\+[1-9][0-9]?$/;
 const WORD_TAG = /^[a-z0-9][a-z0-9_ -]{0,31}$/;
+// An artificer infusion: infusion:<id>, or infusion:<id>:<option> such as Resistant Armor's damage
+// type. Unlike the others it can go on any kind of item.
+const INFUSION_TAG = /^infusion:([a-z0-9_]+)(?::([a-z0-9_]+))?$/;
 
 export const BONUS_PRESETS = [1, 2, 3];
 export const WORD_PRESETS = ["silvered"];
@@ -18,11 +21,25 @@ export const bonusOf = (tags: string[]) => {
   return tag ? Number(tag.slice(1)) : 0;
 };
 
-export const wordsOf = (tags: string[]) => tags.filter((t) => !BONUS_TAG.test(t));
+export const wordsOf = (tags: string[]) =>
+  tags.filter((t) => !BONUS_TAG.test(t) && !INFUSION_TAG.test(t));
 
 // An entry can only have one +X, so this replaces any it already has.
-export const withBonus = (tags: string[], bonus: number) =>
-  bonus ? [`+${bonus}`, ...wordsOf(tags)] : wordsOf(tags);
+export const withBonus = (tags: string[], bonus: number) => {
+  const rest = tags.filter((t) => !BONUS_TAG.test(t));
+  return bonus ? [`+${bonus}`, ...rest] : rest;
+};
+
+export type InfusionTag = { tag: string; id: string; option?: string };
+
+export const infusionsOf = (tags: string[]): InfusionTag[] =>
+  tags.flatMap((tag) => {
+    const m = INFUSION_TAG.exec(tag);
+    return m ? [{ tag, id: m[1], option: m[2] }] : [];
+  });
+
+export const infusionTag = (id: string, option?: string) =>
+  option ? `infusion:${id}:${option}` : `infusion:${id}`;
 
 export const toggleWord = (tags: string[], word: string) =>
   tags.includes(word) ? tags.filter((t) => t !== word) : [...tags, word];

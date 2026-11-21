@@ -13,6 +13,7 @@ import { getCharacter, getItemDef, getRuleset, getSheet, patchEntry } from "@/li
 import type { InventoryView } from "@/lib/api/client";
 import { useSheetAction } from "@/lib/api/useSheetAction";
 import { pretty } from "@/lib/format";
+import { isInfusionWarning } from "@/lib/infusions";
 import { bondedEntryId, hasPactOfTheBlade } from "@/lib/pactWeapon";
 import { C } from "@/lib/colors";
 
@@ -97,8 +98,18 @@ export default function InventoryPage() {
       ? `Carrying ${Math.round(carry.weight * 10) / 10}${carry.capacity ? ` / ${carry.capacity}` : ""} ${carry.unit ?? ""}${carry.state ? ` · ${pretty(carry.state)}` : ""}`
       : "";
 
+  const infusionWarnings = (sheet.warnings ?? []).filter((w) => isInfusionWarning(w) && !w.acknowledged);
+
   return (
     <Page>
+      {infusionWarnings.length > 0 && (
+        <View style={s.warning}>
+          {infusionWarnings.map((w) => (
+            <Text key={w.key} style={{ color: C.warning }}>• {w.message}</Text>
+          ))}
+        </View>
+      )}
+
       {/* Wallet */}
       <Pressable style={s.box} onPress={() => setCoinsOpen(true)}>
         <View style={s.coinRow}>
@@ -256,6 +267,7 @@ function Section({
             <Text style={[s.cell, { flex: 3 }, e.stashed && { color: C.border }]}>
               {e.name}
               {e.attuned && <Text style={s.tag}> ◆</Text>}
+              {(e.tags ?? []).some((t) => t.startsWith("infusion:")) && <Text style={s.pact}> Infused</Text>}
               {e.entry_id === bondedId && <Text style={s.pact}> Pact</Text>}
               {e.stashed && <Text style={s.tag}> (stashed)</Text>}
             </Text>
@@ -291,6 +303,7 @@ const s = StyleSheet.create({
   cell: { fontSize: 15 },
   tag: { fontSize: 12, color: C.muted },
   pact: { fontSize: 12, color: C.magic, fontWeight: "700" },
+  warning: { borderWidth: 1, borderColor: C.warningBorder, backgroundColor: C.warningSoft, borderRadius: 10, padding: 10, gap: 4 },
   check: { width: 24, height: 24, marginRight: 10, borderRadius: 6, borderWidth: 2, borderColor: C.textSecondary, alignItems: "center", justifyContent: "center", backgroundColor: C.surface },
   checkOn: { backgroundColor: C.accent, borderColor: C.accent },
 });

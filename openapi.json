@@ -133,6 +133,9 @@
       },
       "Action": {
         "properties": {
+          "armor_weapon": {
+            "type": "boolean"
+          },
           "attack": {
             "$ref": "#/components/schemas/AttackDetails"
           },
@@ -1130,6 +1133,9 @@
           "id": {
             "type": "string"
           },
+          "infusion": {
+            "$ref": "#/components/schemas/Infusion"
+          },
           "level_gained": {
             "type": "integer"
           },
@@ -1521,6 +1527,93 @@
       "HealthResponse": {
         "properties": {
           "status": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "Infusion": {
+        "properties": {
+          "actions": {
+            "items": {
+              "$ref": "#/components/schemas/Action"
+            },
+            "type": "array"
+          },
+          "bonus": {
+            "type": "integer"
+          },
+          "bonus_target": {
+            "type": "string"
+          },
+          "bonus_tiers": {
+            "items": {
+              "$ref": "#/components/schemas/InfusionBonus"
+            },
+            "type": "array"
+          },
+          "id": {
+            "type": "string"
+          },
+          "item_choice": {
+            "type": "string"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/InfusionTarget"
+            },
+            "type": "array"
+          },
+          "modifiers": {
+            "items": {
+              "$ref": "#/components/schemas/Modifier"
+            },
+            "type": "array"
+          },
+          "options": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "requires_attunement": {
+            "type": "boolean"
+          },
+          "rules": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "InfusionBonus": {
+        "properties": {
+          "bonus": {
+            "type": "integer"
+          },
+          "min_level": {
+            "type": "integer"
+          }
+        },
+        "type": "object"
+      },
+      "InfusionTarget": {
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "armour",
+              "shield",
+              "weapon",
+              "other"
+            ],
+            "type": "string"
+          },
+          "tag": {
+            "type": "string"
+          },
+          "weapon_property": {
             "type": "string"
           }
         },
@@ -1993,6 +2086,20 @@
           "range": {
             "type": "string"
           },
+          "save": {
+            "enum": [
+              "str",
+              "dex",
+              "con",
+              "int",
+              "wis",
+              "cha"
+            ],
+            "type": "string"
+          },
+          "save_dc": {
+            "type": "integer"
+          },
           "to_hit": {
             "type": "integer"
           },
@@ -2011,6 +2118,12 @@
       },
       "PetGrant": {
         "properties": {
+          "active_limits": {
+            "items": {
+              "$ref": "#/components/schemas/PetLimit"
+            },
+            "type": "array"
+          },
           "creature_ids": {
             "items": {
               "type": "string"
@@ -2022,6 +2135,17 @@
               "type": "string"
             },
             "type": "array"
+          }
+        },
+        "type": "object"
+      },
+      "PetLimit": {
+        "properties": {
+          "max": {
+            "type": "integer"
+          },
+          "min_level": {
+            "type": "integer"
           }
         },
         "type": "object"
@@ -2202,6 +2326,9 @@
             },
             "type": "array"
           },
+          "class_id": {
+            "type": "string"
+          },
           "level": {
             "type": "integer"
           },
@@ -2268,6 +2395,12 @@
           },
           "max_bonus": {
             "type": "integer"
+          },
+          "max_mul": {
+            "type": "integer"
+          },
+          "max_pb": {
+            "type": "boolean"
           },
           "name": {
             "type": "string"
@@ -2601,6 +2734,12 @@
           "caster_level": {
             "description": "Combined caster level for multiclass slot tables. Pact casters don't count.",
             "type": "integer"
+          },
+          "class_levels": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "type": "object"
           },
           "features": {
             "description": "Every feature the character has, from classes, subclasses, race, background, feats and choices, in the order they resolved. The race and background themselves are listed too.",
@@ -3006,6 +3145,7 @@
       "SpellGrant": {
         "properties": {
           "ability": {
+            "description": "The casting ability for these spells. An item may leave it empty to cast with the wielder's class spellcasting (\"using your spell save DC\"), taking the ability with the best DC; features must set it.",
             "enum": [
               "str",
               "dex",
@@ -3016,8 +3156,14 @@
             ],
             "type": "string"
           },
+          "no_save": {
+            "type": "boolean"
+          },
           "resource": {
             "$ref": "#/components/schemas/Resource"
+          },
+          "save_dc": {
+            "type": "integer"
           },
           "spell_ids": {
             "items": {
@@ -3048,6 +3194,7 @@
       "SpellSourceView": {
         "properties": {
           "ability": {
+            "description": "The ability these spells are cast with. For an item whose spells use the wielder's spellcasting, the class ability it settled on.",
             "enum": [
               "str",
               "dex",

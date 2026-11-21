@@ -235,7 +235,10 @@ function PetCard({ id, pet, source }: { id: string; pet: PetView; source?: PetSo
                 {a.name}
                 <Text style={s.muted}>
                   {"  "}
-                  {signed(a.to_hit)} to hit · {a.damage || "–"}
+                  {/* A saving-throw attack has no to-hit (it's 0); the target saves against the DC. */}
+                  {a.save ? `DC ${a.save_dc ?? "–"} ${a.save.toUpperCase()} save` : `${signed(a.to_hit)} to hit`}
+                  {" · "}
+                  {a.damage || "–"}
                   {a.range ? ` · ${shortRange(a.range)}` : ""}
                 </Text>
               </Text>
