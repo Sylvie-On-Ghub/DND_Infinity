@@ -729,6 +729,7 @@ export interface components {
             note?: string;
         };
         Action: {
+            armor_weapon?: boolean;
             attack?: components["schemas"]["AttackDetails"];
             description?: string;
             duration?: string;
@@ -1048,6 +1049,7 @@ export interface components {
             form_choices?: components["schemas"]["FormChoice"][];
             grants?: components["schemas"]["Grants"];
             id?: string;
+            infusion?: components["schemas"]["Infusion"];
             level_gained?: number;
             modifiers?: components["schemas"]["Modifier"][];
             name?: string;
@@ -1169,6 +1171,30 @@ export interface components {
         };
         HealthResponse: {
             status?: string;
+        };
+        Infusion: {
+            actions?: components["schemas"]["Action"][];
+            bonus?: number;
+            bonus_target?: string;
+            bonus_tiers?: components["schemas"]["InfusionBonus"][];
+            id?: string;
+            item_choice?: string;
+            items?: components["schemas"]["InfusionTarget"][];
+            modifiers?: components["schemas"]["Modifier"][];
+            options?: string[];
+            requires_attunement?: boolean;
+            rules?: string;
+        };
+        InfusionBonus: {
+            bonus?: number;
+            min_level?: number;
+        };
+        InfusionTarget: {
+            id?: string;
+            /** @enum {string} */
+            kind?: "armour" | "shield" | "weapon" | "other";
+            tag?: string;
+            weapon_property?: string;
         };
         InventoryItem: {
             /** @enum {string} */
@@ -1323,13 +1349,21 @@ export interface components {
             description?: string;
             name?: string;
             range?: string;
+            /** @enum {string} */
+            save?: "str" | "dex" | "con" | "int" | "wis" | "cha";
+            save_dc?: number;
             to_hit?: number;
             /** @enum {string} */
             type?: "action" | "bonus_action" | "reaction" | "free" | "other";
         };
         PetGrant: {
+            active_limits?: components["schemas"]["PetLimit"][];
             creature_ids?: string[];
             tags?: string[];
+        };
+        PetLimit: {
+            max?: number;
+            min_level?: number;
         };
         PetPatch: {
             creature_id?: string;
@@ -1381,6 +1415,7 @@ export interface components {
         };
         PoolFilter: {
             allowed?: string[];
+            class_id?: string;
             level?: number;
             spell_list?: string;
             tag?: string;
@@ -1403,6 +1438,8 @@ export interface components {
             /** @enum {string} */
             max_ability?: "str" | "dex" | "con" | "int" | "wis" | "cha";
             max_bonus?: number;
+            max_mul?: number;
+            max_pb?: boolean;
             name?: string;
             /** @enum {string} */
             recharge?: "short_rest" | "long_rest" | "dawn" | "none";
@@ -1511,6 +1548,9 @@ export interface components {
             carry?: components["schemas"]["CarryView"];
             /** @description Combined caster level for multiclass slot tables. Pact casters don't count. */
             caster_level?: number;
+            class_levels?: {
+                [key: string]: number;
+            };
             /** @description Every feature the character has, from classes, subclasses, race, background, feats and choices, in the order they resolved. The race and background themselves are listed too. */
             features?: components["schemas"]["FeatureView"][];
             /** @description Forms the character can switch on (Rage, Bladesong), each with whether it is active, the uses left and the picks offered when it is activated. Start and end them with POST /api/characters/{id}/forms. */
@@ -1630,9 +1670,14 @@ export interface components {
             upcast?: components["schemas"]["UpcastEntry"][];
         };
         SpellGrant: {
-            /** @enum {string} */
+            /**
+             * @description The casting ability for these spells. An item may leave it empty to cast with the wielder's class spellcasting ("using your spell save DC"), taking the ability with the best DC; features must set it.
+             * @enum {string}
+             */
             ability?: "str" | "dex" | "con" | "int" | "wis" | "cha";
+            no_save?: boolean;
             resource?: components["schemas"]["Resource"];
+            save_dc?: number;
             spell_ids?: string[];
         };
         SpellList: {
@@ -1641,7 +1686,10 @@ export interface components {
             spell_ids?: string[];
         };
         SpellSourceView: {
-            /** @enum {string} */
+            /**
+             * @description The ability these spells are cast with. For an item whose spells use the wielder's spellcasting, the class ability it settled on.
+             * @enum {string}
+             */
             ability?: "str" | "dex" | "con" | "int" | "wis" | "cha";
             attack_bonus?: number;
             cantrips?: components["schemas"]["SpellView"][];

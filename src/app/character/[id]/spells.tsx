@@ -14,6 +14,12 @@ import { useSheetAction } from "@/lib/api/useSheetAction";
 import { damageText, levelLabel, pretty, shortRange, shortTime, signed } from "@/lib/format";
 import { C } from "@/lib/colors";
 
+// An item that fixes its own DC, or casts without a save, has no casting ability. Its 0s for attack
+// and DC aren't real numbers, so they show as blank rather than "+0" and "DC 0".
+const sourceAttack = (src: SpellSourceView) =>
+  !src.ability && !src.attack_bonus ? undefined : src.attack_bonus;
+const sourceDc = (src: SpellSourceView) => (!src.ability && !src.save_dc ? undefined : src.save_dc);
+
 export default function SpellsPage() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const [sourceId, setSourceId] = useState<string | "all">("all");
@@ -75,6 +81,10 @@ export default function SpellsPage() {
 
   const modOf = (src: SpellSourceView) =>
     src.ability ? sheet.abilities?.[src.ability]?.mod : undefined;
+  const dcText = (src: SpellSourceView) => {
+    const dc = sourceDc(src);
+    return dc !== undefined ? String(dc) : "–";
+  };
 
   return (
     <Page>
@@ -125,19 +135,16 @@ export default function SpellsPage() {
             <View key={src.id} style={s.row}>
               <Text style={[s.cell, { flex: 2, fontWeight: "600" }]}>{src.name ?? pretty(src.id)}</Text>
               <Text style={[s.cell, s.statCell]}>{signed(modOf(src))}</Text>
-              <Text style={[s.cell, s.statCell]}>{signed(src.attack_bonus)} hit</Text>
-              <Text style={[s.cell, s.statCell]}>DC {src.save_dc ?? "–"}</Text>
+              <Text style={[s.cell, s.statCell]}>{signed(sourceAttack(src))} hit</Text>
+              <Text style={[s.cell, s.statCell]}>DC {dcText(src)}</Text>
             </View>
           ))}
         </View>
       ) : (
         <View style={s.stats}>
           <Stat label="Mod." value={signed(modOf(statSources[0]))} />
-          <Stat label="Spell attack" value={signed(statSources[0].attack_bonus)} />
-          <Stat
-            label="Save DC"
-            value={statSources[0].save_dc !== undefined ? String(statSources[0].save_dc) : "–"}
-          />
+          <Stat label="Spell attack" value={signed(sourceAttack(statSources[0]))} />
+          <Stat label="Save DC" value={dcText(statSources[0])} />
         </View>
       )}
 
@@ -254,9 +261,9 @@ function SpellRow({
   const effects = sp.effects ?? [];
 
   const hit = sp.attack
-    ? signed(sp.attack_bonus ?? src.attack_bonus)
+    ? signed(sp.attack_bonus ?? sourceAttack(src))
     : sp.save_ability
-    ? `${sp.save_dc ?? src.save_dc ?? "–"} ${sp.save_ability.toUpperCase()}`
+    ? `${sp.save_dc ?? sourceDc(src) ?? "–"} ${sp.save_ability.toUpperCase()}`
     : "–";
 
   const upcastLines = effects

@@ -5,7 +5,9 @@ import { changeQuantity, moveEntry, patchEntry, removeEntry } from "@/lib/api/ch
 import type { EntryPatch, InventoryView } from "@/lib/api/client";
 import { useSheetAction } from "@/lib/api/useSheetAction";
 import { pretty } from "@/lib/format";
+import { useKnownInfusions } from "@/lib/infusions";
 import { bonusEffect, bonusOf, takesTags } from "@/lib/itemTags";
+import { InfusionEditor } from "./InfusionEditor";
 import { bondExisting, endBond, isConjured } from "@/lib/pactWeapon";
 import { TagEditor } from "./TagEditor";
 import { Btn, ModalShell, ui } from "./ui";
@@ -52,6 +54,7 @@ export function ItemModal({
   const here = entry.container ?? "";
   const quantity = entry.quantity ?? 1;
   const bonus = bonusOf(entry.tags ?? []);
+  const known = useKnownInfusions(id);
 
   return (
     <ModalShell title={entry.name ?? "Item"} onClose={onClose}>
@@ -79,6 +82,22 @@ export function ItemModal({
         <Toggle label="Attuned" value={!!entry.attuned} disabled={busy} onChange={(v) => patch({ attuned: v })} />
       )}
       <Toggle label="Stashed (not carried)" value={!!entry.stashed} disabled={busy} onChange={(v) => patch({ stashed: v })} />
+
+      {/* Artificer infusions: any kind of item can carry them */}
+      {(known.length > 0 || (entry.tags ?? []).some((t) => t.startsWith("infusion:"))) && (
+        <View style={{ gap: 6 }}>
+          <Text style={ui.label}>Infusions</Text>
+          <InfusionEditor
+            id={id}
+            entryId={eid}
+            tags={entry.tags ?? []}
+            known={known}
+            disabled={busy}
+            onChange={(tags) => tagAction.mutate(() => patchEntry(id, eid, { tags }))}
+          />
+          {!takesTags(entry.kind) && tagAction.error && <Text style={ui.err}>{tagAction.error.message}</Text>}
+        </View>
+      )}
 
       {/* Tags */}
       {takesTags(entry.kind) && (
